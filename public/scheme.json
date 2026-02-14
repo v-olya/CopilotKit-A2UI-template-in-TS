@@ -1,0 +1,188 @@
+[
+  {
+    "id": "root",
+    "component": {
+      "Column": {
+        "children": {
+          "explicitList": [
+            "card1",
+            "card2Placeholder"
+          ]
+        },
+        "distribution": "start",
+        "alignment": "stretch"
+      }
+    }
+  },
+  {
+    "id": "card1",
+    "component": {
+      "Card": {
+        "child": "twoColRow"
+      }
+    }
+  },
+  {
+    "id": "twoColRow",
+    "component": {
+      "Row": {
+        "children": {
+          "explicitList": [
+            "leftCol",
+            "divider",
+            "rightCol"
+          ]
+        },
+        "distribution": "start",
+        "alignment": "stretch"
+      }
+    }
+  },
+  {
+    "id": "leftCol",
+    "component": {
+      "Column": {
+        "children": {
+          "explicitList": [
+            "bgImage",
+            "scriptNameText"
+          ]
+        },
+        "distribution": "spaceBetween",
+        "alignment": "center"
+      }
+    }
+  },
+  {
+    "id": "bgImage",
+    "component": {
+      "Image": {
+        "url": {
+          "literalString": "https://example.com/static-background.jpg"
+        },
+        "fit": "cover",
+        "usageHint": "largeFeature"
+      }
+    }
+  },
+  {
+    "id": "scriptNameText",
+    "component": {
+      "Text": {
+        "text": {
+          "path": "/scriptName"
+        },
+        "usageHint": "h3"
+      }
+    }
+  },
+  {
+    "id": "divider",
+    "component": {
+      "Divider": {
+        "axis": "vertical"
+      }
+    }
+  },
+  {
+    "id": "rightCol",
+    "component": {
+      "Column": {
+        "children": {
+          "template": {
+            "componentId": "buttonTemplate",
+            "dataBinding": "/fixOptions"
+          }
+        },
+        "distribution": "start",
+        "alignment": "stretch"
+      }
+    }
+  },
+  {
+    "id": "buttonTemplate",
+    "component": {
+      "Button": {
+        "child": "buttonText",
+        "action": {
+          "name": "selectOption",
+          "context": [
+            {
+              "key": "option",
+              "value": {
+                "path": "/"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "id": "buttonText",
+    "component": {
+      "Text": {
+        "text": {
+          "path": "/"
+        }
+      }
+    }
+  },
+  {
+    "id": "card2Placeholder",
+    "component": {
+      "Card": {
+        "child": "threeColRowPlaceholder"
+      }
+    }
+  },
+  {
+    "id": "threeColRowPlaceholder",
+    "component": {
+      "Row": {
+        "children": {
+          "explicitList": [
+            "col1Placeholder",
+            "col2Placeholder",
+            "col3Placeholder"
+          ]
+        },
+        "distribution": "start",
+        "alignment": "stretch"
+      }
+    }
+  },
+  {
+    "id": "col1Placeholder",
+    "component": {
+      "Text": {
+        "text": {
+          "literalString": "Col 1 Placeholder"
+        },
+        "usageHint": "caption"
+      }
+    }
+  },
+  {
+    "id": "col2Placeholder",
+    "component": {
+      "Text": {
+        "text": {
+          "literalString": "Col 2 Placeholder"
+        },
+        "usageHint": "caption"
+      }
+    }
+  },
+  {
+    "id": "col3Placeholder",
+    "component": {
+      "Text": {
+        "text": {
+          "literalString": "Col 3 Placeholder"
+        },
+        "usageHint": "caption"
+      }
+    }
+  }
+]

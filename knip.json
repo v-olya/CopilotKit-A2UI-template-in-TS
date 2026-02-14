@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [
+    "agent-server/**",
+    ".venv/**",
+    "**/*.d.ts"
+  ],
+  "ignoreDependencies": [
+    "postcss-load-config"
+  ]
+}
