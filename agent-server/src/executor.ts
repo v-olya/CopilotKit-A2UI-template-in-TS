@@ -132,7 +132,10 @@ function createBookingForm(
   const dataContents = [
     { key: "title", valueString: "Book a Table" },
     { key: "address", valueString: String(actionContext.address ?? "") },
-    { key: "restaurantName", valueString: String(actionContext.restaurantName ?? "") },
+    {
+      key: "restaurantName",
+      valueString: String(actionContext.restaurantName ?? ""),
+    },
     { key: "partySize", valueString: "2" },
     { key: "reservationTime", valueString: "" },
     { key: "dietary", valueString: "" },
@@ -151,7 +154,9 @@ function createBookingForm(
     { dataModelUpdate: { surfaceId, path: "/", contents: dataContents } },
   ];
 
-  const parts: Array<{ kind: "text"; text: string } | ReturnType<typeof createA2UIPart>> = [];
+  const parts: Array<
+    { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
+  > = [];
   for (const a2ui of a2uiMessages) {
     parts.push(createA2UIPart(a2ui));
   }
@@ -210,14 +215,29 @@ function createBookingConfirmation(
         },
       },
     },
-    { id: "confirm-title", component: { Text: { text: { path: "title" }, usageHint: "h2" } } },
-    { id: "confirm-image", component: { Image: { url: { path: "imageUrl" } } } },
-    { id: "confirm-details", component: { Text: { text: { path: "bookingDetails" } } } },
-    { id: "confirm-dietary", component: { Text: { text: { path: "dietaryRequirements" } } } },
+    {
+      id: "confirm-title",
+      component: { Text: { text: { path: "title" }, usageHint: "h2" } },
+    },
+    {
+      id: "confirm-image",
+      component: { Image: { url: { path: "imageUrl" } } },
+    },
+    {
+      id: "confirm-details",
+      component: { Text: { text: { path: "bookingDetails" } } },
+    },
+    {
+      id: "confirm-dietary",
+      component: { Text: { text: { path: "dietaryRequirements" } } },
+    },
     {
       id: "confirm-text",
       component: {
-        Text: { text: { literalString: "We look forward to seeing you!" }, usageHint: "h5" },
+        Text: {
+          text: { literalString: "We look forward to seeing you!" },
+          usageHint: "h5",
+        },
       },
     },
     { id: "divider1", component: { Divider: {} } },
@@ -248,7 +268,9 @@ function createBookingConfirmation(
     { dataModelUpdate: { surfaceId, path: "/", contents: dataContents } },
   ];
 
-  const parts: Array<{ kind: "text"; text: string } | ReturnType<typeof createA2UIPart>> = [];
+  const parts: Array<
+    { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
+  > = [];
   for (const a2ui of a2uiMessages) {
     parts.push(createA2UIPart(a2ui));
   }
@@ -297,40 +319,57 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       eventBus.publish(initialTask);
     }
 
-    const workingUpdate: TaskStatusUpdateEvent = {
-      kind: "status-update",
-      taskId,
-      contextId,
-      final: false,
-      status: {
-        state: "working",
-        timestamp: new Date().toISOString(),
-        message: {
-          kind: "message",
-          messageId: uuidv4(),
-          role: "agent",
-          taskId,
-          contextId,
-          parts: [{ kind: "text", text: "Finding restaurants..." }],
-        },
-      },
-    };
-    eventBus.publish(workingUpdate);
-
     // @ts-ignore
     const forwardedProps = task?.forwardedProps;
+    console.log(
+      "[DEBUG] task exists:",
+      !!task,
+      ", has forwardedProps:",
+      !!forwardedProps,
+    );
+    if (forwardedProps) {
+      console.log(
+        "[DEBUG] forwardedProps keys:",
+        Object.keys(forwardedProps).join(", "),
+      );
+    }
     let query = "";
     let userAction: string | undefined;
     let actionContext: Record<string, unknown> = {};
 
+    console.log("[DEBUG] userMessage parts count:", userMessage.parts.length);
+    for (let i = 0; i < userMessage.parts.length; i++) {
+      const part = userMessage.parts[i];
+      console.log(`[DEBUG] Part ${i}: kind=${part?.kind}`);
+      if (part?.kind === "data") {
+        const dataPart = part as {
+          kind: "data";
+          data: Record<string, unknown>;
+        };
+        console.log(
+          `[DEBUG] Part ${i} data keys:`,
+          Object.keys(dataPart.data).join(", "),
+        );
+      }
+    }
+
     if (forwardedProps) {
       // @ts-ignore
       const a2uiAction = forwardedProps?.a2uiAction;
+      console.log("[DEBUG] a2uiAction:", !!a2uiAction);
       if (a2uiAction) {
+        console.log(
+          "[DEBUG] a2uiAction keys:",
+          Object.keys(a2uiAction).join(", "),
+        );
         // Extract action from forwardedProps
         const actionName = a2uiAction?.actionName || a2uiAction?.name;
         const actionCtx = a2uiAction?.context || {};
         if (actionName) {
+          console.log(
+            "[DEBUG] Extracted action from forwardedProps:",
+            actionName,
+          );
           userAction = actionName as string;
           actionContext =
             typeof actionCtx === "object"
@@ -338,18 +377,74 @@ export class RestaurantAgentExecutor implements AgentExecutor {
               : {};
         }
       }
+      // @ts-ignore
+      const command = forwardedProps?.command;
+      console.log("[DEBUG] command:", !!command);
+      if (command) {
+        console.log("[DEBUG] command keys:", Object.keys(command).join(", "));
+      }
     }
 
     // Try to extract action from message parts first (actions take priority over text)
     for (const part of userMessage.parts) {
-      if (part?.kind === "data" && part.data) {
-        if ("userAction" in part.data) {
-          const ua = part.data.userAction as {
-            actionName?: string;
+      if (part?.kind === "data") {
+        const dataPart = part as {
+          kind: "data";
+          data: Record<string, unknown>;
+        };
+        console.log(
+          "[DEBUG] Processing data part, keys:",
+          Object.keys(dataPart.data).join(", "),
+        );
+        // Check for various action keys
+        if ("userAction" in dataPart.data) {
+          console.log(
+            "[DEBUG] Found userAction in data part, value:",
+            JSON.stringify(dataPart.data.userAction),
+          );
+          const ua = dataPart.data.userAction;
+          // Handle both string and object formats
+          if (typeof ua === "string") {
+            userAction = ua;
+            console.log("[DEBUG] userAction is string:", userAction);
+          } else if (typeof ua === "object" && ua !== null) {
+            const uaObj = ua as {
+              name?: string;
+              actionName?: string;
+              context?: Record<string, unknown>;
+            };
+            userAction = uaObj?.name || uaObj?.actionName;
+            actionContext = uaObj?.context ?? {};
+            console.log(
+              "[DEBUG] userAction from object:",
+              userAction,
+              "context:",
+              JSON.stringify(actionContext).substring(0, 100),
+            );
+          }
+          if (userAction) {
+            query = getQueryFromAction(userAction, actionContext);
+            break;
+          }
+        } else if ("action" in dataPart.data) {
+          console.log("[DEBUG] Found action in data part!");
+          const a = dataPart.data.action as {
+            name?: string;
             context?: Record<string, unknown>;
           };
-          userAction = ua?.actionName;
-          actionContext = ua?.context ?? {};
+          userAction = a?.name;
+          actionContext = a?.context ?? {};
+          query = getQueryFromAction(userAction, actionContext);
+          break;
+        } else if ("a2uiAction" in dataPart.data) {
+          console.log("[DEBUG] Found a2uiAction in data part!");
+          const a = dataPart.data.a2uiAction as {
+            actionName?: string;
+            name?: string;
+            context?: Record<string, unknown>;
+          };
+          userAction = a?.actionName || a?.name;
+          actionContext = a?.context ?? {};
           query = getQueryFromAction(userAction, actionContext);
           break;
         }
@@ -375,6 +470,13 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       query = "Find me some restaurants.";
     }
 
+    console.log(
+      "[DEBUG] Final: userAction=",
+      userAction,
+      ", query=",
+      query.substring(0, 50),
+    );
+
     // Check if this is a user action from A2UI button click
     if (userAction === "book_restaurant" && actionContext.restaurantName) {
       const finalUpdate = createBookingForm(actionContext, taskId, contextId);
@@ -385,7 +487,11 @@ export class RestaurantAgentExecutor implements AgentExecutor {
 
     // Handle booking submission - generate directly without LLM
     if (userAction === "submit_booking") {
-      const finalUpdate = createBookingConfirmation(actionContext, taskId, contextId);
+      const finalUpdate = createBookingConfirmation(
+        actionContext,
+        taskId,
+        contextId,
+      );
       eventBus.publish(finalUpdate);
       eventBus.finished();
       return;
@@ -687,8 +793,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       for (const a2ui of a2uiMessages) {
         parts.push(createA2UIPart(a2ui));
       }
-
-      
 
       // Send response with A2UI only - don't pass through model text
       const finalUpdate: TaskStatusUpdateEvent = {
