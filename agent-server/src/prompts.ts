@@ -2,6 +2,7 @@
  * System prompt for the restaurant agent.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getSystemPrompt(_baseUrl: string): string {
   return `You are a helpful restaurant assistant. 
 

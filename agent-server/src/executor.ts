@@ -5,6 +5,17 @@ import type {
 } from "@a2a-js/sdk/server";
 import type { Task, TaskStatusUpdateEvent } from "@a2a-js/sdk";
 import { v4 as uuidv4 } from "uuid";
+
+interface TaskWithForwardedProps extends Task {
+  forwardedProps?: {
+    a2uiAction?: {
+      actionName?: string;
+      name?: string;
+      context?: Record<string, unknown>;
+    };
+    command?: Record<string, unknown>;
+  };
+}
 import { ollamaChatWithTools } from "./ollama.js";
 import { getSystemPrompt, GET_RESTAURANTS_TOOL } from "./prompts.js";
 import { getRestaurants } from "./restaurant-data.js";
@@ -305,6 +316,7 @@ export class RestaurantAgentExecutor implements AgentExecutor {
     eventBus: ExecutionEventBus,
   ): Promise<void> {
     const { userMessage, taskId, contextId, task } = requestContext;
+    const taskWithForwardedProps = task as TaskWithForwardedProps | undefined;
 
     if (!task) {
       const initialTask: Task = {
@@ -319,8 +331,7 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       eventBus.publish(initialTask);
     }
 
-    // @ts-ignore
-    const forwardedProps = task?.forwardedProps;
+    const forwardedProps = taskWithForwardedProps?.forwardedProps;
     console.log(
       "[DEBUG] task exists:",
       !!task,
@@ -354,7 +365,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
     }
 
     if (forwardedProps) {
-      // @ts-ignore
       const a2uiAction = forwardedProps?.a2uiAction;
       console.log("[DEBUG] a2uiAction:", !!a2uiAction);
       if (a2uiAction) {
@@ -377,7 +387,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
               : {};
         }
       }
-      // @ts-ignore
       const command = forwardedProps?.command;
       console.log("[DEBUG] command:", !!command);
       if (command) {
@@ -563,7 +572,7 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       return;
     }
 
-    const { text, a2uiMessages } = parseAgentResponse(content);
+    parseAgentResponse(content);
 
     const parts: Array<
       { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>

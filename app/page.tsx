@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <CopilotKitProvider
       runtimeUrl="/api/copilotkit"
-      showDevConsole={true}
+      showDevConsole={false}
       renderActivityMessages={activityRenderers}
     >
       <main
