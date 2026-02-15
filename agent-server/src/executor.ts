@@ -513,15 +513,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       { role: "user" as const, content: query },
     ];
 
-    let lastRestaurantResults: Array<{
-      name: string;
-      cuisine: string;
-      location: string;
-      address?: string;
-      imageUrl?: string;
-      rating?: number;
-    }> = [];
-
     const runTool = async (
       name: string,
       args: Record<string, unknown>,
@@ -532,7 +523,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
           location: args.location as string | undefined,
           count: args.count as number | undefined,
         });
-        lastRestaurantResults = list;
         return JSON.stringify(list);
       }
       return JSON.stringify({ error: `Unknown tool: ${name}` });
@@ -574,264 +564,24 @@ export class RestaurantAgentExecutor implements AgentExecutor {
 
     parseAgentResponse(content);
 
+    const { text, a2uiMessages } = parseAgentResponse(content);
+
     const parts: Array<
       { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
     > = [];
 
-    // Always use fallback A2UI generation when we have restaurant results
-    // (our code produces correct A2UI, model attempts are unreliable)
-    if (lastRestaurantResults.length > 0) {
-      const surfaceId = "restaurant-list";
-
-      // Use List component with template (matching official A2UI format)
-      const components: Array<{
-        id: string;
-        component: Record<string, unknown>;
-      }> = [];
-      const dataContents: Array<{
-        key: string;
-        valueMap?: Array<{
-          key: string;
-          valueString?: string;
-          valueNumber?: number;
-        }>;
-      }> = [];
-
-      // Root container - uses List with template for dynamic rendering
-      components.push({
-        id: "root-column",
-        component: {
-          Column: {
-            children: { explicitList: ["title-heading", "restaurant-list"] },
-          },
-        },
-      });
-
-      // Title
-      components.push({
-        id: "title-heading",
-        component: {
-          Text: {
-            text: { literalString: "Recommended Restaurants" },
-            usageHint: "h1",
-          },
-        },
-      });
-
-      // List with template - this is the proper way to render dynamic lists
-      components.push({
-        id: "restaurant-list",
-        component: {
-          List: {
-            direction: "vertical",
-            children: {
-              template: {
-                componentId: "restaurant-card",
-                dataBinding: "/restaurants",
-              },
-            },
-          },
-        },
-      });
-
-      // Card template component
-      components.push({
-        id: "restaurant-card",
-        component: {
-          Card: {
-            child: "card-content",
-          },
-        },
-      });
-
-      // Card content - Row with image and details
-      components.push({
-        id: "card-content",
-        component: {
-          Row: {
-            children: { explicitList: ["card-image", "card-details"] },
-          },
-        },
-      });
-
-      // Image
-      components.push({
-        id: "card-image",
-        component: {
-          Image: {
-            url: { path: "imageUrl" },
-          },
-        },
-      });
-
-      // Details column
-      components.push({
-        id: "card-details",
-        component: {
-          Column: {
-            children: {
-              explicitList: [
-                "card-name",
-                "card-cuisine",
-                "card-address",
-                "card-rating",
-                "book-btn",
-              ],
-            },
-          },
-        },
-      });
-
-      // Name
-      components.push({
-        id: "card-name",
-        component: {
-          Text: {
-            text: { path: "name" },
-            usageHint: "h3",
-          },
-        },
-      });
-
-      // Cuisine
-      components.push({
-        id: "card-cuisine",
-        component: {
-          Text: {
-            text: { path: "cuisine" },
-            usageHint: "body",
-          },
-        },
-      });
-
-      // Address
-      components.push({
-        id: "card-address",
-        component: {
-          Text: {
-            text: { path: "address" },
-            usageHint: "caption",
-          },
-        },
-      });
-
-      // Rating
-      components.push({
-        id: "card-rating",
-        component: {
-          Text: {
-            text: { path: "ratingText" },
-            usageHint: "caption",
-          },
-        },
-      });
-
-      // Book button with action
-      components.push({
-        id: "book-btn-text",
-        component: {
-          Text: {
-            text: { literalString: "Book" },
-          },
-        },
-      });
-
-      components.push({
-        id: "book-btn",
-        component: {
-          Button: {
-            child: "book-btn-text",
-            primary: true,
-            action: {
-              name: "book_restaurant",
-              context: [
-                { key: "restaurantName", value: { path: "name" } },
-                { key: "imageUrl", value: { path: "imageUrl" } },
-                { key: "address", value: { path: "address" } },
-              ],
-            },
-          },
-        },
-      });
-
-      // Data model - restaurants array with nested valueMap
-      const restaurantItems: Array<{
-        key: string;
-        valueMap: Array<{
-          key: string;
-          valueString?: string;
-          valueNumber?: number;
-        }>;
-      }> = [];
-      lastRestaurantResults.forEach((r, i) => {
-        restaurantItems.push({
-          key: `restaurant-${i}`,
-          valueMap: [
-            { key: "name", valueString: r.name },
-            { key: "cuisine", valueString: r.cuisine },
-            { key: "location", valueString: r.location },
-            { key: "address", valueString: r.address || "" },
-            {
-              key: "ratingText",
-              valueString: r.rating ? `Rating: ${r.rating}/5` : "",
-            },
-            { key: "imageUrl", valueString: r.imageUrl || "" },
-          ],
-        });
-      });
-
-      dataContents.push({
-        key: "restaurants",
-        valueMap: restaurantItems,
-      });
-
-      // Combine all A2UI messages - send each operation separately (A2AAgent processes them individually)
-      const a2uiMessages = [
-        {
-          beginRendering: {
-            surfaceId,
-            root: "root-column",
-            styles: { primaryColor: "#FF0000", font: "Roboto" },
-          },
-        },
-        { surfaceUpdate: { surfaceId, components } },
-        { dataModelUpdate: { surfaceId, path: "/", contents: dataContents } },
-      ];
-
-      // Send each A2UI message as a separate data part (A2AAgent expects this format)
+    // If LLM returned A2UI JSON, pass it through
+    if (a2uiMessages.length > 0) {
       for (const a2ui of a2uiMessages) {
         parts.push(createA2UIPart(a2ui));
       }
-
-      // Send response with A2UI only - don't pass through model text
-      const finalUpdate: TaskStatusUpdateEvent = {
-        kind: "status-update",
-        taskId,
-        contextId,
-        final: true,
-        status: {
-          state: "input-required",
-          timestamp: new Date().toISOString(),
-          message: {
-            kind: "message",
-            messageId: uuidv4(),
-            role: "agent",
-            taskId,
-            contextId,
-            parts,
-          },
-        },
-      };
-      eventBus.publish(finalUpdate);
-      eventBus.finished();
-      return;
-    }
-
-    // Normal flow - call LLM to get restaurants
-
-    if (parts.length === 0) {
-      // No results - show whatever the model says
-      parts.push({ kind: "text", text: content.trim() || "Done." });
+      // Add text response if any
+      if (text) {
+        parts.push({ kind: "text", text });
+      }
+    } else {
+      // No A2UI - just return text
+      parts.push({ kind: "text", text: text || content.trim() || "Done." });
     }
 
     const finalUpdate: TaskStatusUpdateEvent = {
