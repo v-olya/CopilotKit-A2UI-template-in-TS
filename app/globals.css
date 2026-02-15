@@ -25,3 +25,12 @@
     @apply min-h-screen bg-background text-foreground font-sans antialiased;
   }
 }
+
+/* Fix: limit messages height so input stays visible */
+main > div:first-child > div:first-child {
+  height: calc(100% - 100px) !important;
+}
+
+themed-a2ui-surface {
+  justify-content: center !important;
+}

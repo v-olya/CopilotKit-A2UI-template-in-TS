@@ -168,13 +168,13 @@ function createBookingForm(
   const parts: Array<
     { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
   > = [];
-  for (const a2ui of a2uiMessages) {
-    parts.push(createA2UIPart(a2ui));
-  }
   parts.push({
     kind: "text",
     text: `Please fill in the details to book at ${actionContext.restaurantName}.`,
   });
+  for (const a2ui of a2uiMessages) {
+    parts.push(createA2UIPart(a2ui));
+  }
 
   return {
     kind: "status-update",
@@ -282,13 +282,13 @@ function createBookingConfirmation(
   const parts: Array<
     { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
   > = [];
+  parts.push({
+    kind: "text",
+    text: `Your reservation at ${actionContext.restaurantName} is confirmed!`,
+  });
   for (const a2ui of a2uiMessages) {
     parts.push(createA2UIPart(a2ui));
   }
-  parts.push({
-    kind: "text",
-    text: `\n\nYour reservation at ${actionContext.restaurantName} is confirmed!`,
-  });
 
   return {
     kind: "status-update",
