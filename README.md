@@ -1,6 +1,6 @@
 # Restaurant Assistant with CopilotKit
 
-A Next.js application with an AI-powered restaurant assistant using [CopilotKit](https://copilotkit.ai). TS-written brother of https://github.com/CopilotKit/with-a2a-a2ui.
+A Next.js application with an AI-powered restaurant assistant using [CopilotKit](https://copilotkit.ai). TS-brother of https://github.com/CopilotKit/with-a2a-a2ui.
 
 ## Branches Overview
 
@@ -47,9 +47,7 @@ The LLM calls frontend tools defined with `useFrontendTool`. Each tool has a `ha
 LLM → Tool Call → useFrontendTool.handler → useFrontendTool.render
 ```
 
-##### Ollama Integration
-
-This branch uses a local [Ollama](https://ollama.com) LLM via CopilotKit's `BuiltInAgent`.
+**Ollama Integration:** This branch uses a local [Ollama](https://ollama.com) LLM via CopilotKit's `BuiltInAgent`.
 
 CopilotKit v1.51.3 uses an agent-based architecture where the runtime creates a `BuiltInAgent` to handle chat requests. By default, the runtime auto-creates this agent from the service adapter's `provider` and `model` properties and passes them through `resolveModel()`, which only supports `openai`, `anthropic`, and `google`.
 
@@ -91,6 +89,12 @@ cd agent-server && npm install && npm run dev
 
 # all branches
 
+# main, wait-for-copilotkit-1.60
+
+cd agent-server && npm install && npm run dev
+
+# all branches
+
 npm run dev
 ```
 
@@ -99,3 +103,8 @@ npm run dev
 - [CopilotKit Documentation](https://docs.copilotkit.ai)
 - [Frontend Tools Guide](https://docs.copilotkit.ai/frontend-actions)
 - [A2UI Protocol](https://a2ui.org)
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
