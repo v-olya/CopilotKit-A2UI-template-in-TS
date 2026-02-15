@@ -28,8 +28,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, "..", "..", ".env") });
 
 const MODEL = process.env.OLLAMA_MODEL ?? "llama3.2:latest";
-const PORT = process.env.AGENT_PORT ?? "10002";
-const BASE_URL = `http://localhost:${PORT}`;
 
 function getQueryFromAction(
   userAction: string | undefined,
@@ -507,7 +505,7 @@ export class RestaurantAgentExecutor implements AgentExecutor {
     }
 
     // Normal flow - call LLM to get restaurants
-    const systemPrompt = getSystemPrompt(BASE_URL);
+    const systemPrompt = getSystemPrompt();
     const messages = [
       { role: "system" as const, content: systemPrompt },
       { role: "user" as const, content: query },

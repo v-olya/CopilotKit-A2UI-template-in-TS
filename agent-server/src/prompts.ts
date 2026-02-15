@@ -2,8 +2,7 @@
  * System prompt for the restaurant agent.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function getSystemPrompt(_baseUrl: string): string {
+export function getSystemPrompt(): string {
   return `You are a helpful restaurant assistant. 
 
 Your job is to help users find restaurants. When a user asks for restaurants:
@@ -18,13 +17,20 @@ export const GET_RESTAURANTS_TOOL = {
   type: "function" as const,
   function: {
     name: "get_restaurants",
-    description: "Get a list of restaurants by optional cuisine, location, and maximum count.",
+    description:
+      "Get a list of restaurants by optional cuisine, location, and maximum count.",
     parameters: {
       type: "object" as const,
       properties: {
-        cuisine: { type: "string", description: "Filter by cuisine type (e.g. Chinese, Italian)" },
+        cuisine: {
+          type: "string",
+          description: "Filter by cuisine type (e.g. Chinese, Italian)",
+        },
         location: { type: "string", description: "Filter by city or region" },
-        count: { type: "number", description: "Max number of restaurants to return (default 10)" },
+        count: {
+          type: "number",
+          description: "Max number of restaurants to return (default 10)",
+        },
       },
       required: [] as string[],
     },
