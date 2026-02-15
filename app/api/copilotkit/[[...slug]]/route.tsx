@@ -1,27 +1,46 @@
 import {
   CopilotRuntime,
-  createCopilotEndpoint,
-  InMemoryAgentRunner,
-} from "@copilotkit/runtime/v2";
-import { A2AAgent } from "@ag-ui/a2a";
-import { A2AClient } from "@a2a-js/sdk/client";
-import { handle } from "hono/vercel";
+  EmptyAdapter,
+  copilotRuntimeNextJSAppRouterEndpoint,
+} from "@copilotkit/runtime";
+import { BuiltInAgent } from "@copilotkitnext/agent";
+import { createOpenAI } from "@ai-sdk/openai";
+import { NextRequest } from "next/server";
 
-const a2aAgentUrl = process.env.A2A_AGENT_URL ?? "http://localhost:10002";
-const a2aClient = new A2AClient(a2aAgentUrl);
-const agent = new A2AAgent({ a2aClient });
+const ollamaModel = process.env.OLLAMA_MODEL || "gpt-oss:20b-cloud";
+const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+
+const ollamaProvider = createOpenAI({
+  apiKey: "ollama",
+  baseURL: `${ollamaBaseUrl}/v1`,
+});
+
+const agent = new BuiltInAgent({
+  model: ollamaProvider(ollamaModel),
+  prompt:
+    "You are a helpful restaurant assistant. Help users find restaurants, make reservations, and answer food-related questions.",
+});
 
 const runtime = new CopilotRuntime({
-  agents: {
-    default: agent,
-  },
-  runner: new InMemoryAgentRunner(),
+  agents: { default: agent },
 });
 
-const app = createCopilotEndpoint({
-  runtime,
-  basePath: "/api/copilotkit",
-});
+export const POST = async (req: NextRequest) => {
+  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    serviceAdapter: new EmptyAdapter(),
+    endpoint: "/api/copilotkit",
+  });
 
-export const GET = handle(app);
-export const POST = handle(app);
+  return handleRequest(req);
+};
+
+export const GET = async (req: NextRequest) => {
+  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    serviceAdapter: new EmptyAdapter(),
+    endpoint: "/api/copilotkit",
+  });
+
+  return handleRequest(req);
+};

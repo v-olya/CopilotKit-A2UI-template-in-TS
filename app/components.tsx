@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 export interface Restaurant {
   name: string;
@@ -10,7 +11,7 @@ export interface Restaurant {
   imageUrl?: string;
 }
 
-export interface RestaurantCardProps {
+interface RestaurantCardProps {
   name: string;
   cuisine: string;
   address: string;
@@ -19,7 +20,7 @@ export interface RestaurantCardProps {
   onBook?: (restaurantName: string) => void;
 }
 
-export function RestaurantCard({
+function RestaurantCard({
   name,
   cuisine,
   address,
@@ -30,11 +31,13 @@ export function RestaurantCard({
   return (
     <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white">
       {imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={imageUrl}
           alt={name}
           className="w-full h-32 object-cover"
+          width={400}
+          height={128}
+          unoptimized
         />
       )}
       <div className="p-3">
@@ -57,7 +60,7 @@ export function RestaurantCard({
   );
 }
 
-export interface RestaurantListProps {
+interface RestaurantListProps {
   restaurants: Restaurant[];
   onBook?: (restaurantName: string) => void;
 }
@@ -65,19 +68,14 @@ export interface RestaurantListProps {
 export function RestaurantList({ restaurants, onBook }: RestaurantListProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-      {restaurants.map((restaurant, index) => (
-        <RestaurantCard
-          // eslint-disable-next-line react/no-array-index-key
-          key={index}
-          {...restaurant}
-          onBook={onBook}
-        />
+      {restaurants.map((restaurant) => (
+        <RestaurantCard key={restaurant.name} {...restaurant} onBook={onBook} />
       ))}
     </div>
   );
 }
 
-export interface BookingFormProps {
+interface BookingFormProps {
   restaurantName: string;
   address?: string;
   imageUrl?: string;
@@ -89,7 +87,10 @@ export interface BookingFormProps {
     address?: string;
     imageUrl?: string;
   }) => void;
-  onAction?: (action: { name: string; context?: Record<string, unknown> }) => void;
+  onAction?: (action: {
+    name: string;
+    context?: Record<string, unknown>;
+  }) => void;
 }
 
 export function BookingForm({
@@ -105,7 +106,14 @@ export function BookingForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const data = { partySize, reservationTime, dietary, restaurantName, address, imageUrl };
+    const data = {
+      partySize,
+      reservationTime,
+      dietary,
+      restaurantName,
+      address,
+      imageUrl,
+    };
     onSubmit?.(data);
     onAction?.({
       name: "submit_booking",
@@ -115,18 +123,20 @@ export function BookingForm({
 
   return (
     <div className="border rounded-lg p-4 bg-white shadow-sm">
-      <h2 className="text-xl font-bold mb-4">Book a Table at {restaurantName}</h2>
+      <h2 className="text-xl font-bold mb-4">
+        Book a Table at {restaurantName}
+      </h2>
       {imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={imageUrl}
           alt={restaurantName}
           className="w-full h-32 object-cover rounded mb-4"
+          width={400}
+          height={128}
+          unoptimized
         />
       )}
-      {address && (
-        <p className="text-sm text-gray-600 mb-4">{address}</p>
-      )}
+      {address && <p className="text-sm text-gray-600 mb-4">{address}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1">Party Size</label>
@@ -153,7 +163,9 @@ export function BookingForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Dietary Requirements</label>
+          <label className="block text-sm font-medium mb-1">
+            Dietary Requirements
+          </label>
           <input
             type="text"
             value={dietary}
@@ -173,7 +185,7 @@ export function BookingForm({
   );
 }
 
-export interface ConfirmationProps {
+interface ConfirmationProps {
   restaurantName: string;
   partySize: string;
   reservationTime: string;
@@ -195,11 +207,13 @@ export function Confirmation({
         <h2 className="text-xl font-bold text-green-700">Booking Confirmed!</h2>
       </div>
       {imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={imageUrl}
           alt={restaurantName}
           className="w-full h-32 object-cover rounded my-4"
+          width={400}
+          height={128}
+          unoptimized
         />
       )}
       <div className="space-y-2 mt-4">
