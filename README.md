@@ -1,106 +1,110 @@
-# CopilotKit <> A2A + A2UI Starter
+# Restaurant Assistant with CopilotKit
 
-TS-written brother of https://github.com/CopilotKit/with-a2a-a2ui.
+A Next.js application with an AI-powered restaurant assistant using [CopilotKit](https://copilotkit.ai). TS-brother of https://github.com/CopilotKit/with-a2a-a2ui.
 
-This is a starter template for building AI agents that use [A2UI](https://a2ui.org) and [CopilotKit](https://copilotkit.ai). It provides a modern Next.js application with an integrated restaurant finder agent that can find restaurants and book reservations
+## Branches Overview
 
-![Demo](Demo.gif)
+This repository contains 3 branches demonstrating different approaches to render custom UI components:
 
-## Prerequisites
+| Branch                     | Rendering Approach      |
+| -------------------------- | ----------------------- |
+| `main`                     | A2UI (standard catalog) |
+| `wait-for-copilotkit-1.60` | A2UI (custom catalog)   |
+| `ag-ui-version`            | Frontend Tools          |
 
-- [OpenRouter](https://openrouter.ai) API key (for the A2A agent server)
-- Node.js 20+
-- Any of the following package managers:
-  - pnpm (recommended)
-  - npm
-  - yarn
-  - bun
+### Common Features
 
-> **Note:** This repository ignores lock files (package-lock.json, yarn.lock, pnpm-lock.yaml, bun.lockb) to avoid conflicts between different package managers. Each developer should generate their own lock file using their preferred package manager. After that, make sure to delete it from the .gitignore.
+All branches include:
+
+- Restaurant search by cuisine/location
+- Restaurant booking form
+- Booking confirmation display
+- CopilotKit chat interface
+
+### Rendering Approaches
+
+#### A2UI - Standard Catalog (main)
+
+The LLM returns A2UI JSON using the standard A2UI component catalog with a custom theme:
+
+```
+LLM → A2UI JSON (standard) → createA2UIMessageRenderer → React Components
+```
+
+#### A2UI - Custom Catalog (wait-for-copilotkit-1.60)
+
+The LLM returns A2UI JSON using a custom component catalog (`catalogId: "restaurant-app-v1"`):
+
+```
+LLM → A2UI JSON (custom) → @copilotkit/a2ui-renderer → React Components
+```
+
+#### Frontend Tools (ag-ui-version)
+
+The LLM calls frontend tools defined with `useFrontendTool`. Each tool has a `handler` (runs on frontend) and `render` (displays UI):
+
+```
+LLM → Tool Call → useFrontendTool.handler → useFrontendTool.render
+```
+
+**Ollama Integration:** The ag-ui-branch uses a local [Ollama](https://ollama.com) LLM via CopilotKit's `BuiltInAgent`.
+
+CopilotKit v1.51.3 uses an agent-based architecture where the runtime creates a `BuiltInAgent` to handle chat requests. By default, the runtime auto-creates this agent from the service adapter's `provider` and `model` properties and passes them through `resolveModel()`, which only supports `openai`, `anthropic`, and `google`.
+
+To use Ollama, we bypass `resolveModel()` entirely:
+
+1. **`@ai-sdk/openai`** creates an OpenAI-compatible provider pointed at Ollama's `/v1` endpoint (Ollama exposes this natively).
+2. **`BuiltInAgent`** accepts either a model string (`"openai/gpt-4o"`) or a `LanguageModel` object. By passing the object directly, `resolveModel()` skips all string parsing.
+3. **`EmptyAdapter`** satisfies the service adapter type requirement without interfering, since the agent handles all LLM communication.
+4. **Agents provided directly** via `agents: { default: agent }` — the runtime sees agents already exist and never tries to auto-create one.
+
+```
+Ollama ← @ai-sdk/openai (baseURL: localhost:11434/v1) ← BuiltInAgent ← CopilotRuntime
+```
 
 ## Getting Started
 
-1. Install dependencies using your preferred package manager:
-```bash
-# Using pnpm (recommended)
-pnpm install
+### Prerequisites
 
-# Using npm
+- Node.js 20+
+- Ollama (for `wait-for-copilotkit-1.60` and `ag-ui-version`)
+- OpenRouter API key (for `main` branch)
+
+### Installation
+
+```bash
 npm install
-
-# Using yarn
-yarn install
-
-# Using bun
-bun install
 ```
 
-3. Set up your OpenRouter API key:
+### Environment Variables
 
-Create a `.env` or `.env.local` file in the project root (or copy from `.env.example`):
+Create `.env` or `.env.local` from `.env.example`
 
-```
-OPENROUTER_API_KEY=sk-or-v1-...your-openrouter-key-here...
-```
+### Running
 
-Get a key at [OpenRouter Keys](https://openrouter.ai/keys).
-
-4. Start the development server:
 ```bash
-# Using pnpm
-pnpm dev
+# main, wait-for-copilotkit-1.60
 
-# Using npm
+cd agent-server && npm install && npm run dev
+
+# all branches
+
+# main, wait-for-copilotkit-1.60
+
+cd agent-server && npm install && npm run dev
+
+# all branches
+
 npm run dev
-
-# Using yarn
-yarn dev
-
-# Using bun
-bun run dev
 ```
-
-This will start both the Next.js app and the **TypeScript A2A agent server** (port 10002). The agent server uses OpenRouter for the LLM and generates A2UI JSON for the restaurant finder UI.
-
-**First-time setup:** Install the agent server dependencies once:
-```bash
-cd agent-server && npm install && cd ..
-```
-
-## Available Scripts
-- `dev` - Starts the Next.js UI and the A2A agent server (both required for A2UI)
-- `dev:ui` - Starts only the Next.js UI (chat will work but A2UI needs the agent)
-- `dev:agent` - Builds and runs only the A2A agent server
-- `build:agent` - Builds the agent server
-- `build` - Builds the Next.js application for production
-- `start` - Starts the production server
-- `lint` - Runs ESLint for code linting
-
-## Architecture
-
-- **Next.js app** (`app/`) – CopilotKit UI and A2UI message renderer. Talks to the A2A agent via `A2AAgent` + `A2AClient`.
-- **Agent server** (`agent-server/`) – TypeScript A2A server (Express). Uses OpenRouter for the LLM, no Vercel AI SDK. Implements the restaurant finder: `get_restaurants` tool, A2UI prompt, and multi-part responses (text + A2UI JSON) so the frontend can render rich UI.
 
 ## Documentation
 
-The main UI is in `app/page.tsx`. A2UI surfaces are produced by the agent server and rendered by `@copilotkit/a2ui-renderer`. For building new A2UI flows, see [A2UI Composer](https://a2ui-editor.ag-ui.com).
-
-- [A2UI + CopilotKit Documentation](https://docs.copilotkit.ai/a2a) - Learn more about how to use A2UI with CopilotKit
-- [A2UI Documentation](https://a2ui.org) - Learn more about A2UI and its capabilities
-- [CopilotKit Documentation](https://docs.copilotkit.ai) - Explore CopilotKit's capabilities
-- [Next.js Documentation](https://nextjs.org/docs) - Learn about Next.js features and API
-
-## Contributing
-
-Feel free to submit issues and enhancement requests! This starter is designed to be easily extensible.
+- [CopilotKit Documentation](https://docs.copilotkit.ai)
+- [Frontend Tools Guide](https://docs.copilotkit.ai/frontend-actions)
+- [A2UI Protocol](https://a2ui.org)
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Troubleshooting
-
-### Agent / API issues
-1. Ensure `OPENROUTER_API_KEY` is set in `.env` or `.env.local` (root). The agent server loads it from there.
-2. Run `npm run dev` so both the UI and the agent server start (agent on port 10002).
-3. If the agent fails to build, run `cd agent-server && npm install && npm run build`.
