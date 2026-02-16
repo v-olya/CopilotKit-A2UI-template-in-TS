@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   AgentExecutor,
   RequestContext,
   ExecutionEventBus,
@@ -511,88 +511,24 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       { role: "user" as const, content: query },
     ];
 
-    let lastRestaurantResults: Array<{
-      name: string;
-      cuisine: string;
-      location: string;
-      address?: string;
-      imageUrl?: string;
-      rating?: number;
-    }> = [];
+    const sendRestaurantListUpdate = (
+      restaurants: Array<{
+        name: string;
+        cuisine: string;
+        location: string;
+        address?: string;
+        imageUrl?: string;
+        rating?: number;
+      }>,
+    ) => {
+      if (restaurants.length === 0) return;
 
-    const runTool = async (
-      name: string,
-      args: Record<string, unknown>,
-    ): Promise<string> => {
-      if (name === "get_restaurants") {
-        const list = getRestaurants({
-          cuisine: args.cuisine as string | undefined,
-          location: args.location as string | undefined,
-          count: args.count as number | undefined,
-        });
-        lastRestaurantResults = list;
-        return JSON.stringify(list);
-      }
-      return JSON.stringify({ error: `Unknown tool: ${name}` });
-    };
-
-    let content: string;
-    try {
-      content = await ollamaChatWithTools({
-        model: MODEL,
-        messages,
-        tools: [GET_RESTAURANTS_TOOL],
-        temperature: 0.7,
-        runTool,
-      });
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      const errorUpdate: TaskStatusUpdateEvent = {
-        kind: "status-update",
-        taskId,
-        contextId,
-        final: true,
-        status: {
-          state: "failed",
-          timestamp: new Date().toISOString(),
-          message: {
-            kind: "message",
-            messageId: uuidv4(),
-            role: "agent",
-            taskId,
-            contextId,
-            parts: [{ kind: "text", text: `Error: ${errMsg}` }],
-          },
-        },
-      };
-      eventBus.publish(errorUpdate);
-      eventBus.finished();
-      return;
-    }
-
-    parseAgentResponse(content);
-
-    const parts: Array<
-      { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
-    > = [];
-
-    // Always use fallback A2UI generation when we have restaurant results
-    // (our code produces correct A2UI, model attempts are unreliable)
-    if (lastRestaurantResults.length > 0) {
       const surfaceId = "restaurant-list";
 
       // Use List component with template (matching official A2UI format)
       const components: Array<{
         id: string;
         component: Record<string, unknown>;
-      }> = [];
-      const dataContents: Array<{
-        key: string;
-        valueMap?: Array<{
-          key: string;
-          valueString?: string;
-          valueNumber?: number;
-        }>;
       }> = [];
 
       // Root container - uses List with template for dynamic rendering
@@ -761,7 +697,7 @@ export class RestaurantAgentExecutor implements AgentExecutor {
           valueNumber?: number;
         }>;
       }> = [];
-      lastRestaurantResults.forEach((r, i) => {
+      restaurants.forEach((r, i) => {
         restaurantItems.push({
           key: `restaurant-${i}`,
           valueMap: [
@@ -778,12 +714,14 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         });
       });
 
-      dataContents.push({
-        key: "restaurants",
-        valueMap: restaurantItems,
-      });
+      const dataContents = [
+        {
+          key: "restaurants",
+          valueMap: restaurantItems,
+        },
+      ];
 
-      // Combine all A2UI messages - send each operation separately (A2AAgent processes them individually)
+      // Combine all A2UI messages
       const a2uiMessages = [
         {
           beginRendering: {
@@ -796,19 +734,22 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         { dataModelUpdate: { surfaceId, path: "/", contents: dataContents } },
       ];
 
-      // Send each A2UI message as a separate data part (A2AAgent expects this format)
+      const parts: Array<
+        { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
+      > = [];
+
       for (const a2ui of a2uiMessages) {
         parts.push(createA2UIPart(a2ui));
       }
 
-      // Send response with A2UI only - don't pass through model text
-      const finalUpdate: TaskStatusUpdateEvent = {
+      // Publish UI update (not final, we will send text after)
+      const uiUpdate: TaskStatusUpdateEvent = {
         kind: "status-update",
         taskId,
         contextId,
-        final: true,
+        final: false,
         status: {
-          state: "input-required",
+          state: "input-required", // Still processing text
           timestamp: new Date().toISOString(),
           message: {
             kind: "message",
@@ -820,12 +761,67 @@ export class RestaurantAgentExecutor implements AgentExecutor {
           },
         },
       };
-      eventBus.publish(finalUpdate);
+      eventBus.publish(uiUpdate);
+    };
+
+    const runTool = async (
+      name: string,
+      args: Record<string, unknown>,
+    ): Promise<string> => {
+      if (name === "get_restaurants") {
+        const list = getRestaurants({
+          cuisine: args.cuisine as string | undefined,
+          location: args.location as string | undefined,
+          count: args.count as number | undefined,
+        });
+
+        // Publish results immediately!
+        sendRestaurantListUpdate(list);
+
+        return JSON.stringify(list);
+      }
+      return JSON.stringify({ error: `Unknown tool: ${name}` });
+    };
+
+    let content: string;
+    try {
+      content = await ollamaChatWithTools({
+        model: MODEL,
+        messages,
+        tools: [GET_RESTAURANTS_TOOL],
+        temperature: 0.7,
+        runTool,
+      });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const errorUpdate: TaskStatusUpdateEvent = {
+        kind: "status-update",
+        taskId,
+        contextId,
+        final: true,
+        status: {
+          state: "failed",
+          timestamp: new Date().toISOString(),
+          message: {
+            kind: "message",
+            messageId: uuidv4(),
+            role: "agent",
+            taskId,
+            contextId,
+            parts: [{ kind: "text", text: `Error: ${errMsg}` }],
+          },
+        },
+      };
+      eventBus.publish(errorUpdate);
       eventBus.finished();
       return;
     }
 
-    // Normal flow - call LLM to get restaurants
+    parseAgentResponse(content);
+
+    const parts: Array<
+      { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
+    > = [];
 
     if (parts.length === 0) {
       // No results - show whatever the model says

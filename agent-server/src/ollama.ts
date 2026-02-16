@@ -13,18 +13,31 @@ export interface OllamaTool {
   function: {
     name: string;
     description: string;
-    parameters: { type: "object"; properties: Record<string, unknown>; required?: string[] };
+    parameters: {
+      type: "object";
+      properties: Record<string, unknown>;
+      required?: string[];
+    };
   };
 }
 
-export type OllamaToolRunner = (name: string, args: Record<string, unknown>) => Promise<string>;
+export type OllamaToolRunner = (
+  name: string,
+  args: Record<string, unknown>,
+) => Promise<string>;
 
 async function callOllama(params: {
   model: string;
   messages: OllamaMessage[];
   tools?: OllamaTool[];
   temperature?: number;
-}): Promise<{ content?: string | null; tool_calls?: Array<{ id: string; function?: { name?: string; arguments?: string } }> }> {
+}): Promise<{
+  content?: string | null;
+  tool_calls?: Array<{
+    id: string;
+    function?: { name?: string; arguments?: unknown };
+  }>;
+}> {
   const body: Record<string, unknown> = {
     model: params.model,
     messages: params.messages,
@@ -48,7 +61,10 @@ async function callOllama(params: {
   const data = (await res.json()) as {
     message?: {
       content?: string | null;
-      tool_calls?: Array<{ id: string; function?: { name?: string; arguments?: string } }>;
+      tool_calls?: Array<{
+        id: string;
+        function?: { name?: string; arguments?: unknown };
+      }>;
     };
   };
   const message = data.message;
@@ -66,9 +82,8 @@ export async function ollamaChatWithTools(params: {
   runTool: OllamaToolRunner;
 }): Promise<string> {
   const messages: OllamaMessage[] = [...params.messages];
-  const maxRounds = 5;
+  const maxRounds = 3;
   for (let round = 0; round < maxRounds; round++) {
-    
     const msg = await callOllama({
       model: params.model,
       messages,
@@ -85,13 +100,22 @@ export async function ollamaChatWithTools(params: {
       let args: Record<string, unknown> = {};
       try {
         if (tc.function?.arguments) {
-          args = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+          const rawArgs = tc.function.arguments;
+          if (typeof rawArgs === "object") {
+            args = rawArgs as Record<string, unknown>;
+          } else if (typeof rawArgs === "string") {
+            args = JSON.parse(rawArgs) as Record<string, unknown>;
+          }
         }
-      } catch {
-        // ignore parse errors
+      } catch (err) {
+        console.error(
+          "Failed to parse tool arguments:",
+          tc.function?.arguments,
+          err,
+        );
       }
       const result = await params.runTool(name, args);
-      
+
       const parsed = JSON.parse(result);
       if (Array.isArray(parsed) && parsed.length > 0) {
         messages.push({ role: "assistant", content: content || "[Tool call]" });
@@ -101,7 +125,7 @@ export async function ollamaChatWithTools(params: {
         });
         break;
       }
-      
+
       messages.push({ role: "assistant", content: content || "[Tool call]" });
       messages.push({
         role: "user",
