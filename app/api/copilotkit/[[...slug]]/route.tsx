@@ -3,7 +3,7 @@ import {
   EmptyAdapter,
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
-import { BuiltInAgent } from "@copilotkitnext/agent";
+import { BuiltInAgent } from "@copilotkit/runtime/v2";
 import { createOpenAI } from "@ai-sdk/openai";
 import { NextRequest } from "next/server";
 
@@ -35,10 +35,12 @@ const runtime = new CopilotRuntime({
   agents: { default: agent },
 });
 
+const serviceAdapter = new EmptyAdapter();
+
 export const POST = async (req: NextRequest) => {
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime,
-    serviceAdapter: new EmptyAdapter(),
+    serviceAdapter,
     endpoint: "/api/copilotkit",
   });
 
@@ -48,7 +50,7 @@ export const POST = async (req: NextRequest) => {
 export const GET = async (req: NextRequest) => {
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime,
-    serviceAdapter: new EmptyAdapter(),
+    serviceAdapter,
     endpoint: "/api/copilotkit",
   });
 
