@@ -29,7 +29,7 @@ function RestaurantCard({
   onBook,
 }: RestaurantCardProps) {
   return (
-    <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white">
+    <div className="card border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white">
       {imageUrl && (
         <Image
           src={imageUrl}
@@ -67,7 +67,7 @@ interface RestaurantListProps {
 
 export function RestaurantList({ restaurants, onBook }: RestaurantListProps) {
   return (
-    <div className="flex flex-col gap-3 p-4">
+    <div className="flex flex-wrap gap-4 justify-center">
       {restaurants.map((restaurant) => (
         <RestaurantCard key={restaurant.name} {...restaurant} onBook={onBook} />
       ))}
@@ -113,7 +113,7 @@ export function BookingForm({
   };
 
   return (
-    <div className="border rounded-lg p-4 bg-white shadow-sm">
+    <div className="card border rounded-lg p-4 bg-white shadow-sm">
       <h2 className="text-xl font-bold mb-4">
         Book a Table at {restaurantName}
       </h2>
@@ -192,7 +192,7 @@ export function Confirmation({
   imageUrl,
 }: ConfirmationProps) {
   return (
-    <div className="border rounded-lg p-4 bg-white shadow-sm">
+    <div className="card border rounded-lg p-4 bg-white shadow-sm">
       <div className="text-center">
         <div className="text-green-600 text-4xl mb-2">✓</div>
         <h2 className="text-xl font-bold text-green-700">Booking Confirmed!</h2>

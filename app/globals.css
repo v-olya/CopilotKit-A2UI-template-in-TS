@@ -34,3 +34,22 @@ main > div:first-child > div:first-child {
 themed-a2ui-surface {
   justify-content: center !important;
 }
+
+.copilotKitPopup {
+  position: relative !important;
+  top: auto !important;
+  bottom: auto !important;
+  right: auto !important;
+  left: auto !important;
+}
+
+.card {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .card {
+    width: 20rem;
+    flex-shrink: 0;
+  }
+}
