@@ -67,7 +67,7 @@ interface RestaurantListProps {
 
 export function RestaurantList({ restaurants, onBook }: RestaurantListProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+    <div className="flex flex-col gap-3 p-4">
       {restaurants.map((restaurant) => (
         <RestaurantCard key={restaurant.name} {...restaurant} onBook={onBook} />
       ))}
@@ -87,10 +87,6 @@ interface BookingFormProps {
     address?: string;
     imageUrl?: string;
   }) => void;
-  onAction?: (action: {
-    name: string;
-    context?: Record<string, unknown>;
-  }) => void;
 }
 
 export function BookingForm({
@@ -98,7 +94,6 @@ export function BookingForm({
   address,
   imageUrl,
   onSubmit,
-  onAction,
 }: BookingFormProps) {
   const [partySize, setPartySize] = React.useState("2");
   const [reservationTime, setReservationTime] = React.useState("");
@@ -115,10 +110,6 @@ export function BookingForm({
       imageUrl,
     };
     onSubmit?.(data);
-    onAction?.({
-      name: "submit_booking",
-      context: data,
-    });
   };
 
   return (
