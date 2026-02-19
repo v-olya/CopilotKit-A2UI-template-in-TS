@@ -52,7 +52,7 @@ interface BookingData {
 }
 
 function RestaurantAssistant() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>(MOCK_RESTAURANTS);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [bookingConfirmed, setBookingConfirmed] = useState<BookingData | null>(null);
 
@@ -65,94 +65,52 @@ function RestaurantAssistant() {
 
   useCopilotAction({
     name: "searchRestaurants",
-    description: "Search for restaurants by cuisine and/or location",
+    description: "Search for restaurants. Requires at least one filter: cuisine type or location. Call this when user specifies what kind of food or where they want to eat.",
     parameters: [
       {
         name: "cuisine",
         type: "string",
-        description: "The type of cuisine (e.g., Italian, Japanese)",
+        description: "The type of cuisine (e.g., Italian, Japanese, American)",
       },
       {
         name: "location",
         type: "string",
-        description: "The location (e.g., London)",
+        description: "The city or location (e.g., London, New York)",
       },
     ],
     handler: async ({ cuisine, location }) => {
-      if (!cuisine && !location) {
+      setSelectedRestaurant(null);
+      setBookingConfirmed(null);
+
+      const cuisineFilter = cuisine && cuisine.toLowerCase() !== "any" ? cuisine.toLowerCase() : null;
+      const locationFilter = location && location.toLowerCase() !== "any" ? location.toLowerCase() : null;
+
+      if (!cuisineFilter && !locationFilter) {
         setRestaurants([]);
         return [];
       }
 
       let filtered = MOCK_RESTAURANTS;
 
-      if (cuisine && cuisine.toLowerCase() !== "any") {
+      if (cuisineFilter) {
         filtered = filtered.filter((r) =>
-          r.cuisine.toLowerCase().includes(cuisine.toLowerCase()),
+          r.cuisine.toLowerCase().includes(cuisineFilter),
         );
       }
 
-      if (location && location.toLowerCase() !== "any") {
+      if (locationFilter) {
         filtered = filtered.filter((r) =>
-          r.address.toLowerCase().includes(location.toLowerCase()),
+          r.address.toLowerCase().includes(locationFilter),
         );
       }
 
       setRestaurants(filtered);
       return filtered;
     },
-    render: ({ status, result }) => {
+    render: ({ status }) => {
       if (status === "inProgress") {
         return <div>Searching...</div>;
       }
-
-      const displayRestaurants = result || restaurants;
-
-      return (
-        <RestaurantList
-          restaurants={displayRestaurants}
-          onBook={handleBook}
-        />
-      );
-    },
-  });
-
-  useCopilotAction({
-    name: "bookRestaurant",
-    description: "Book a table at a restaurant",
-    parameters: [
-      {
-        name: "restaurantName",
-        type: "string",
-        description: "The name of the restaurant to book",
-      },
-    ],
-    handler: async ({ restaurantName }) => {
-      const r = MOCK_RESTAURANTS.find((res) => res.name === restaurantName);
-      if (r) {
-        setSelectedRestaurant(r);
-        return { success: true, restaurant: r };
-      }
-      return { success: false, error: "Restaurant not found" };
-    },
-    render: () => {
-      if (selectedRestaurant && !bookingConfirmed) {
-        return (
-          <BookingForm
-            restaurantName={selectedRestaurant.name}
-            address={selectedRestaurant.address}
-            imageUrl={selectedRestaurant.imageUrl}
-            onSubmit={(data) => {
-              setBookingConfirmed(data);
-            }}
-          />
-        );
-      }
-
-      if (bookingConfirmed) {
-        return <Confirmation {...bookingConfirmed} />;
-      }
-
       return <></>;
     },
   });
@@ -164,13 +122,53 @@ function RestaurantAssistant() {
           Restaurant Assistant
         </h1>
       </header>
-      <CopilotChat
-        className="flex-1 w-full m-0 rounded-none border-0 border-l shadow-none"
-        labels={{
-          title: "Restaurant Assistant",
-          initial: "Hi! I can help you find and book restaurants. What are you looking for?",
-        }}
-      />
+      <div className="flex flex-1 overflow-hidden">
+        <CopilotChat
+          className="flex-1 w-full m-0 rounded-none border-0 border-l shadow-none"
+          labels={{
+            title: "Restaurant Assistant",
+            initial: "Hi! I can help you find and book restaurants. What are you looking for?",
+          }}
+        />
+        <div className="w-80 border-l bg-white overflow-auto flex flex-col">
+          <div className="p-4 border-b bg-gray-50">
+            <h2 className="font-semibold text-gray-700">
+              {bookingConfirmed ? "Booking Confirmed" : selectedRestaurant ? "Book a Table" : "Restaurants"}
+            </h2>
+          </div>
+          <div className="flex-1 overflow-auto">
+            {bookingConfirmed ? (
+              <div className="p-4">
+                <Confirmation {...bookingConfirmed} />
+              </div>
+            ) : selectedRestaurant ? (
+              <div className="p-4">
+                <button
+                  onClick={() => setSelectedRestaurant(null)}
+                  className="mb-4 text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  ← Back to restaurants
+                </button>
+                <BookingForm
+                  restaurantName={selectedRestaurant.name}
+                  address={selectedRestaurant.address}
+                  imageUrl={selectedRestaurant.imageUrl}
+                  onSubmit={(data) => setBookingConfirmed(data)}
+                />
+              </div>
+            ) : restaurants.length > 0 ? (
+              <RestaurantList
+                restaurants={restaurants}
+                onBook={handleBook}
+              />
+            ) : (
+              <div className="p-4 text-gray-500 text-sm text-center">
+                Search for restaurants using the chat
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
