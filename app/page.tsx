@@ -22,7 +22,10 @@ export default function Home() {
         className="h-full overflow-auto w-screen"
         style={{ minHeight: "100dvh" }}
       >
-        <CopilotChat className="h-full" />;
+        <CopilotChat
+          className="h-full"
+          labels={{ chatInputPlaceholder: "Try London ... or Chinese food" }}
+        />
       </main>
     </CopilotKitProvider>
   );
