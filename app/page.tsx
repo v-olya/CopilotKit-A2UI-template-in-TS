@@ -130,8 +130,7 @@ function RestaurantAssistant() {
         </h1>
         <CopilotPopup
           labels={{
-            title: "Restaurant Assistant",
-            initial: "Hi! I can help you find and book restaurants",
+            placeholder: "Try London ... or Italian food",
           }}
         />
       </header>
@@ -157,7 +156,9 @@ function RestaurantAssistant() {
           ) : restaurants.length > 0 ? (
             <RestaurantList restaurants={restaurants} onBook={handleBook} />
           ) : (
-            <p className="text-gray-400">Use the assistant to search for restaurants</p>
+            <p className="text-gray-400">
+              Use the assistant to search for restaurants
+            </p>
           )}
         </div>
       </div>
