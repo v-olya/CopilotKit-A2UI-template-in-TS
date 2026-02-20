@@ -19,7 +19,7 @@ interface TaskWithForwardedProps extends Task {
 import { ollamaChatWithTools } from "./ollama.js";
 import { getSystemPrompt, GET_RESTAURANTS_TOOL } from "./prompts.js";
 import { getRestaurants } from "./restaurant-data.js";
-import { createA2UIPart, parseAgentResponse } from "./a2ui.js";
+import { createA2UIPart } from "./a2ui.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { config } from "dotenv";
@@ -51,6 +51,25 @@ function createBookingForm(
   const surfaceId = "booking-form";
   const components = [
     {
+      id: "booking-form-row",
+      component: {
+        Row: {
+          children: { explicitList: ["booking-form-card"] },
+          justifyContent: "center",
+        },
+      },
+    },
+    {
+      id: "booking-form-card",
+      component: { 
+        Card: { 
+          child: "booking-form-column",
+          width: 400,
+          flex: "0 0 auto",
+        } 
+      },
+    },
+    {
       id: "booking-form-column",
       component: {
         Column: {
@@ -71,16 +90,30 @@ function createBookingForm(
     {
       id: "booking-title",
       component: {
-        Text: { text: { literalString: "Book a Table" }, usageHint: "h2" },
+        Text: {
+          text: { literalString: "Book a Table" },
+          usageHint: "h2",
+        },
       },
     },
     {
       id: "restaurant-image",
-      component: { Image: { url: { path: "imageUrl" } } },
+      component: {
+        Image: {
+          url: { path: "imageUrl" },
+        },
+      },
     },
     {
       id: "restaurant-address",
-      component: { Text: { text: { path: "address" } } },
+      component: {
+        Text: {
+          text: { path: "address" },
+          styles: {
+            root: "a2ui-card-address",
+          },
+        },
+      },
     },
     {
       id: "party-size-field",
@@ -88,6 +121,9 @@ function createBookingForm(
         TextField: {
           label: { literalString: "Party Size" },
           text: { path: "partySize" },
+          styles: {
+            root: "a2ui-form-field",
+          },
         },
       },
     },
@@ -99,6 +135,9 @@ function createBookingForm(
           value: { path: "reservationTime" },
           enableDate: true,
           enableTime: true,
+          styles: {
+            root: "a2ui-form-field",
+          },
         },
       },
     },
@@ -108,6 +147,9 @@ function createBookingForm(
         TextField: {
           label: { literalString: "Dietary Requirements" },
           text: { path: "dietary" },
+          styles: {
+            root: "a2ui-form-field",
+          },
         },
       },
     },
@@ -155,8 +197,17 @@ function createBookingForm(
     {
       beginRendering: {
         surfaceId,
-        root: "booking-form-column",
-        styles: {},
+        root: "booking-form-row",
+        styles: {
+          bookingFormRow: "a2ui-booking-row",
+          bookingFormCard: "a2ui-card",
+          bookingFormColumn: "a2ui-booking-column",
+          formField: "a2ui-form-field",
+          inputField: "a2ui-input-field",
+          submitButton: "a2ui-submit-button",
+          bookingTitle: "a2ui-booking-title",
+          formLabel: "a2ui-form-label",
+        },
       },
     },
     { surfaceUpdate: { surfaceId, components } },
@@ -203,8 +254,23 @@ function createBookingConfirmation(
 
   const components = [
     {
+      id: "confirmation-row",
+      component: {
+        Row: {
+          children: { explicitList: ["confirmation-card"] },
+          justifyContent: "center",
+        },
+      },
+    },
+    {
       id: "confirmation-card",
-      component: { Card: { child: "confirmation-column" } },
+      component: { 
+        Card: { 
+          child: "confirmation-column",
+          width: 400,
+          flex: "0 0 auto",
+        } 
+      },
     },
     {
       id: "confirmation-column",
@@ -253,7 +319,7 @@ function createBookingConfirmation(
     { id: "divider2", component: { Divider: {} } },
   ];
 
-  const bookingDetails = `Table for ${actionContext.partySize ?? "2"} at ${actionContext.reservationTime ?? "TBD"}`;
+  const bookingDetails = `Table for ${actionContext.partySize ?? "2"} at ${actionContext.restaurantName ?? ""} on ${actionContext.reservationTime ?? "TBD"}`;
   const dietaryRequirements = actionContext.dietary
     ? `Dietary requirements: ${actionContext.dietary}`
     : "";
@@ -269,8 +335,13 @@ function createBookingConfirmation(
     {
       beginRendering: {
         surfaceId,
-        root: "confirmation-card",
-        styles: {},
+        root: "confirmation-row",
+        styles: {
+          confirmationRow: "a2ui-confirmation-row",
+          confirmationCard: "a2ui-card",
+          confirmationColumn: "a2ui-booking-column",
+          confirmTitle: "a2ui-booking-title",
+        },
       },
     },
     { surfaceUpdate: { surfaceId, components } },
@@ -531,7 +602,18 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         component: Record<string, unknown>;
       }> = [];
 
-      // Root container - uses List with template for dynamic rendering
+      // Root wrapper - Row for centering
+      components.push({
+        id: "root-wrapper",
+        component: {
+          Row: {
+            children: { explicitList: ["root-column"] },
+            justifyContent: "center",
+          },
+        },
+      });
+
+      // Inner column with title and list (title above cards, cards in row)
       components.push({
         id: "root-column",
         component: {
@@ -557,7 +639,9 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         id: "restaurant-list",
         component: {
           List: {
-            direction: "vertical",
+            direction: "horizontal",
+            flexWrap: true,
+            justifyContent: "center",
             children: {
               template: {
                 componentId: "restaurant-card",
@@ -574,6 +658,11 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         component: {
           Card: {
             child: "card-content",
+            width: 400,
+            flex: "0 0 auto",
+            styles: {
+              root: "a2ui-card",
+            },
           },
         },
       });
@@ -584,6 +673,7 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         component: {
           Row: {
             children: { explicitList: ["card-image", "card-details"] },
+            gap: 16,
           },
         },
       });
@@ -594,6 +684,9 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         component: {
           Image: {
             url: { path: "imageUrl" },
+            styles: {
+              root: "a2ui-card-image",
+            },
           },
         },
       });
@@ -606,9 +699,9 @@ export class RestaurantAgentExecutor implements AgentExecutor {
             children: {
               explicitList: [
                 "card-name",
-                "card-cuisine",
-                "card-address",
-                "card-rating",
+                "card-cuisine-row",
+                "card-address-row",
+                "card-rating-row",
                 "book-btn",
               ],
             },
@@ -627,35 +720,89 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         },
       });
 
-      // Cuisine
+      // Cuisine with label
       components.push({
-        id: "card-cuisine",
+        id: "card-cuisine-row",
+        component: {
+          Row: {
+            children: { explicitList: ["cuisine-label", "cuisine-value"] },
+          },
+        },
+      });
+      components.push({
+        id: "cuisine-label",
+        component: {
+          Text: {
+            text: { literalString: "Cuisine: " },
+            styles: {
+              root: "a2ui-card-label",
+            },
+          },
+        },
+      });
+      components.push({
+        id: "cuisine-value",
         component: {
           Text: {
             text: { path: "cuisine" },
-            usageHint: "body",
           },
         },
       });
 
-      // Address
+      // Address with label
       components.push({
-        id: "card-address",
+        id: "card-address-row",
+        component: {
+          Row: {
+            children: { explicitList: ["address-label", "address-value"] },
+          },
+        },
+      });
+      components.push({
+        id: "address-label",
+        component: {
+          Text: {
+            text: { literalString: "Address: " },
+            styles: {
+              root: "a2ui-card-label",
+            },
+          },
+        },
+      });
+      components.push({
+        id: "address-value",
         component: {
           Text: {
             text: { path: "address" },
-            usageHint: "caption",
           },
         },
       });
 
-      // Rating
+      // Rating with label
       components.push({
-        id: "card-rating",
+        id: "card-rating-row",
+        component: {
+          Row: {
+            children: { explicitList: ["rating-label", "rating-value"] },
+          },
+        },
+      });
+      components.push({
+        id: "rating-label",
         component: {
           Text: {
-            text: { path: "ratingText" },
-            usageHint: "caption",
+            text: { literalString: "Rating: " },
+            styles: {
+              root: "a2ui-card-label",
+            },
+          },
+        },
+      });
+      components.push({
+        id: "rating-value",
+        component: {
+          Text: {
+            text: { path: "rating" },
           },
         },
       });
@@ -684,6 +831,9 @@ export class RestaurantAgentExecutor implements AgentExecutor {
                 { key: "address", value: { path: "address" } },
               ],
             },
+            styles: {
+              root: "a2ui-card-book-button",
+            },
           },
         },
       });
@@ -706,8 +856,8 @@ export class RestaurantAgentExecutor implements AgentExecutor {
             { key: "location", valueString: r.location },
             { key: "address", valueString: r.address || "" },
             {
-              key: "ratingText",
-              valueString: r.rating ? `Rating: ${r.rating}/5` : "",
+              key: "rating",
+              valueNumber: r.rating || 0,
             },
             { key: "imageUrl", valueString: r.imageUrl || "" },
           ],
@@ -726,8 +876,10 @@ export class RestaurantAgentExecutor implements AgentExecutor {
         {
           beginRendering: {
             surfaceId,
-            root: "root-column",
-            styles: {},
+            root: "root-wrapper",
+            styles: {
+              rootWrapper: "a2ui-root-wrapper",
+            },
           },
         },
         { surfaceUpdate: { surfaceId, components } },
@@ -817,16 +969,9 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       return;
     }
 
-    parseAgentResponse(content);
-
     const parts: Array<
       { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
-    > = [];
-
-    if (parts.length === 0) {
-      // No results - show whatever the model says
-      parts.push({ kind: "text", text: content.trim() || "Done." });
-    }
+    > = [{ kind: "text", text: content.trim() || "Done." }];
 
     const finalUpdate: TaskStatusUpdateEvent = {
       kind: "status-update",

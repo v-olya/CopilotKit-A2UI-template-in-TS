@@ -26,11 +26,17 @@
   }
 }
 
+/* Override CopilotKit's max-w-3xl using custom class */
+.genui-chat .max-w-3xl {
+  max-width: 860px !important;
+}
+/* Override CopilotKit's rigid no-wrap layout */
+.genui-chat section.layout-g-4.layout-p-2 {
+  flex-wrap: wrap !important;
+  justify-content: center;
+}
+
 /* Fix: limit messages height so input stays visible */
 main > div:first-child > div:first-child {
   height: calc(100% - 100px) !important;
-}
-
-themed-a2ui-surface {
-  justify-content: center !important;
 }

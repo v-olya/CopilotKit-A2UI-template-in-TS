@@ -23,7 +23,7 @@ export default function Home() {
         style={{ minHeight: "100dvh" }}
       >
         <CopilotChat
-          className="h-full"
+          className="h-full genui-chat"
           labels={{ chatInputPlaceholder: "Try London ... or Chinese food" }}
         />
       </main>

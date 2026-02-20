@@ -135,7 +135,9 @@
   --text-color: #fff;
   --background-light: #f6f7f8;
   --background-dark: #101922;
-  --border-color: oklch(from var(--background-light) l c h / calc(alpha * 0.15));
+  --border-color: oklch(
+    from var(--background-light) l c h / calc(alpha * 0.15)
+  );
   --elevated-background-light: oklch(
     from var(--background-light) l c h / calc(alpha * 0.05)
   );
@@ -164,11 +166,12 @@
 html,
 body {
   --font-family: "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-family-flex: "Google Sans Flex", "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
-  --font-family-mono: "Google Sans Code", "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
-  --default-font-family: "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-flex:
+    "Google Sans Flex", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-mono:
+    "Google Sans Code", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --default-font-family:
+    "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   background: var(--background-light);
   font-family: var(--font-family);
@@ -181,10 +184,242 @@ body {
 .a2ui-surface {
   color-scheme: light;
   --font-family: "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-family-flex: "Google Sans Flex", "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
-  --font-family-mono: "Google Sans Code", "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
-  --default-font-family: "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-flex:
+    "Google Sans Flex", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-mono:
+    "Google Sans Code", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --default-font-family:
+    "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-family: var(--font-family);
+
+  /* Card styles */
+  --card-border-radius: 16px;
+  --card-border-color: #e0e0e0;
+  --card-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --card-background: #ffffff;
+  --card-padding: 16px;
+  --card-gap: 20px;
+  --card-min-width: 300px;
+  --card-max-width: 360px;
+  --card-fixed-width: 360px;
+  --card-image-height: 200px;
+  --card-image-border-radius: 12px;
+  --card-name-font-size: 20px;
+  --card-name-font-weight: bold;
+  --card-name-margin-bottom: 8px;
+  --card-cuisine-font-size: 16px;
+  --card-cuisine-color: #666666;
+  --card-cuisine-margin-bottom: 4px;
+  --card-address-font-size: 14px;
+  --card-address-color: #999999;
+  --card-address-margin-bottom: 12px;
+  --card-rating-font-size: 14px;
+  --card-rating-color: #4caf50;
+  --card-rating-font-weight: bold;
+  --card-rating-margin-bottom: 16px;
+  --card-book-button-background: #2196f3;
+  --card-book-button-color: #ffffff;
+  --card-book-button-border: none;
+  --card-book-button-border-radius: 8px;
+  --card-book-button-padding: 12px 24px;
+  --card-book-button-font-size: 16px;
+  --card-book-button-font-weight: bold;
+  --card-book-button-hover-background: #1976d2;
+  --card-book-button-transition: background-color 0.2s;
+  --card-label-font-size: 12px;
+  --card-label-font-weight: 600;
+  --card-label-color: #666666;
+  --card-label-margin-right: 4px;
+
+  /* Booking form styles */
+  --booking-card-border-radius: 16px;
+  --booking-card-border-color: #e0e0e0;
+  --booking-card-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --booking-card-background: #ffffff;
+  --booking-card-padding: 24px;
+  --booking-card-max-width: 500px;
+  --booking-card-width: 100%;
+  --booking-form-gap: 16px;
+  --booking-title-font-size: 24px;
+  --booking-title-font-weight: bold;
+  --booking-title-margin-bottom: 24px;
+  --booking-title-text-align: center;
+  --form-field-margin-bottom: 16px;
+  --input-field-width: 100%;
+  --input-field-padding: 12px;
+  --input-field-border: 1px solid #ccc;
+  --input-field-border-radius: 4px;
+  --input-field-font-size: 16px;
+  --form-label-font-size: 14px;
+  --form-label-font-weight: bold;
+  --form-label-margin-bottom: 4px;
+  --form-label-color: #333333;
+  --submit-button-width: 100%;
+  --submit-button-padding: 12px 24px;
+  --submit-button-background: #4caf50;
+  --submit-button-color: #ffffff;
+  --submit-button-border: none;
+  --submit-button-border-radius: 4px;
+  --submit-button-font-size: 16px;
+  --submit-button-font-weight: bold;
+  --submit-button-hover-background: #45a049;
+  --submit-button-transition: background-color 0.2s;
+}
+
+.a2ui-list {
+  display: flex !important;
+}
+
+.a2ui-surface {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap !important;
+  max-width: 860px;
+  gap: var(--card-gap);
+  align-items: center;
+  justify-content: center !important;
+}
+
+/* Generic Card styles - applies to ALL cards */
+.a2ui-surface .a2ui-card {
+  border: 1px solid var(--card-border-color);
+  border-radius: var(--card-border-radius);
+  box-shadow: var(--card-box-shadow);
+  background-color: var(--card-background);
+  padding: var(--card-padding);
+  min-width: var(--card-fixed-width);
+  max-width: var(--card-fixed-width) !important;
+  box-sizing: border-box;
+}
+
+/* Card content row */
+.a2ui-surface .a2ui-card-content {
+  display: flex;
+  gap: 16px;
+}
+
+/* Card label styles */
+.a2ui-surface .a2ui-card-label {
+  font-size: var(--card-label-font-size);
+  font-weight: var(--card-label-font-weight);
+  color: var(--card-label-color);
+  margin-right: var(--card-label-margin-right);
+}
+
+/* Responsive card styles */
+@media (max-width: 560px) {
+  .a2ui-surface .a2ui-card {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
+
+/* Card image styles */
+.a2ui-surface .a2ui-card-image {
+  width: 100%;
+  height: var(--card-image-height);
+  object-fit: cover;
+  border-radius: var(--card-image-border-radius);
+}
+
+/* Card name styles */
+.a2ui-surface .a2ui-card-name {
+  font-size: var(--card-name-font-size);
+  font-weight: var(--card-name-font-weight);
+  margin-bottom: var(--card-name-margin-bottom);
+}
+
+/* Card cuisine styles */
+.a2ui-surface .a2ui-card-cuisine {
+  font-size: var(--card-cuisine-font-size);
+  color: var(--card-cuisine-color);
+  margin-bottom: var(--card-cuisine-margin-bottom);
+}
+
+/* Card address styles */
+.a2ui-surface .a2ui-card-address {
+  font-size: var(--card-address-font-size);
+  color: var(--card-address-color);
+  margin-bottom: var(--card-address-margin-bottom);
+}
+
+/* Card rating styles */
+.a2ui-surface .a2ui-card-rating {
+  font-size: var(--card-rating-font-size);
+  color: var(--card-rating-color);
+  font-weight: var(--card-rating-font-weight);
+  margin-bottom: var(--card-rating-margin-bottom);
+}
+
+/* Card book button styles */
+.a2ui-surface .a2ui-card-book-button {
+  width: 100%;
+  padding: var(--card-book-button-padding);
+  background-color: var(--card-book-button-background);
+  color: var(--card-book-button-color);
+  border: var(--card-book-button-border);
+  border-radius: var(--card-book-button-border-radius);
+  cursor: pointer;
+  font-size: var(--card-book-button-font-size);
+  font-weight: var(--card-book-button-font-weight);
+  transition: var(--card-book-button-transition);
+}
+
+.a2ui-surface .a2ui-card-book-button:hover {
+  background-color: var(--card-book-button-hover-background);
+}
+
+/* Booking form card styles */
+.a2ui-surface .a2ui-booking-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--booking-form-gap);
+}
+
+/* Booking form title styles */
+.a2ui-surface .a2ui-booking-title {
+  font-size: var(--booking-title-font-size);
+  font-weight: var(--booking-title-font-weight);
+  margin-bottom: var(--booking-title-margin-bottom);
+  text-align: var(--booking-title-text-align);
+}
+
+/* Form field styles */
+.a2ui-surface .a2ui-form-field {
+  margin-bottom: var(--form-field-margin-bottom);
+}
+
+/* Input field styles */
+.a2ui-surface .a2ui-input-field {
+  width: var(--input-field-width);
+  padding: var(--input-field-padding);
+  border: var(--input-field-border);
+  border-radius: var(--input-field-border-radius);
+  font-size: var(--input-field-font-size);
+}
+
+/* Form label styles */
+.a2ui-surface .a2ui-form-label {
+  font-size: var(--form-label-font-size);
+  font-weight: var(--form-label-font-weight);
+  margin-bottom: var(--form-label-margin-bottom);
+  color: var(--form-label-color);
+}
+
+/* Submit button styles */
+.a2ui-surface .a2ui-submit-button {
+  width: var(--submit-button-width);
+  padding: var(--submit-button-padding);
+  background-color: var(--submit-button-background);
+  color: var(--submit-button-color);
+  border: var(--submit-button-border);
+  border-radius: var(--submit-button-border-radius);
+  cursor: pointer;
+  font-size: var(--submit-button-font-size);
+  font-weight: var(--submit-button-font-weight);
+  transition: var(--submit-button-transition);
+}
+
+.a2ui-surface .a2ui-submit-button:hover {
+  background-color: var(--submit-button-hover-background);
 }
