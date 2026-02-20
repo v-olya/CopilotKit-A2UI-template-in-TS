@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   AgentExecutor,
   RequestContext,
   ExecutionEventBus,
@@ -16,10 +16,17 @@ interface TaskWithForwardedProps extends Task {
     command?: Record<string, unknown>;
   };
 }
-import { ollamaChatWithTools } from "./ollama.js";
+
+import { ollamaChatWithTools } from "./utils/ollama.js";
 import { getSystemPrompt, GET_RESTAURANTS_TOOL } from "./prompts.js";
 import { getRestaurants } from "./restaurant-data.js";
-import { createA2UIPart } from "./a2ui.js";
+import {
+  getQueryFromAction,
+  createBookingForm,
+  createBookingConfirmation,
+  createRestaurantListUI,
+  type Restaurant,
+} from "./utils/ui-helpers.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { config } from "dotenv";
@@ -28,356 +35,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, "..", "..", ".env") });
 
 const MODEL = process.env.OLLAMA_MODEL ?? "llama3.2:latest";
-
-function getQueryFromAction(
-  userAction: string | undefined,
-  actionContext: Record<string, unknown>,
-): string {
-  if (userAction === "book_restaurant") {
-    return `USER_WANTS_TO_BOOK: ${actionContext.restaurantName ?? "Unknown"}, Address: ${actionContext.address ?? ""}, ImageURL: ${actionContext.imageUrl ?? ""}`;
-  } else if (userAction === "submit_booking") {
-    return `User submitted a booking for ${actionContext.restaurantName ?? ""} for ${actionContext.partySize ?? ""} people at ${actionContext.reservationTime ?? ""}. Dietary: ${actionContext.dietary ?? ""}.`;
-  } else if (userAction) {
-    return `User action: ${userAction} with context: ${JSON.stringify(actionContext)}`;
-  }
-  return "";
-}
-
-function createBookingForm(
-  actionContext: Record<string, unknown>,
-  taskId: string,
-  contextId: string,
-): TaskStatusUpdateEvent {
-  const surfaceId = "booking-form";
-  const components = [
-    {
-      id: "booking-form-row",
-      component: {
-        Row: {
-          children: { explicitList: ["booking-form-card"] },
-          justifyContent: "center",
-        },
-      },
-    },
-    {
-      id: "booking-form-card",
-      component: { 
-        Card: { 
-          child: "booking-form-column",
-          width: 400,
-          flex: "0 0 auto",
-        } 
-      },
-    },
-    {
-      id: "booking-form-column",
-      component: {
-        Column: {
-          children: {
-            explicitList: [
-              "booking-title",
-              "restaurant-image",
-              "restaurant-address",
-              "party-size-field",
-              "datetime-field",
-              "dietary-field",
-              "submit-button",
-            ],
-          },
-        },
-      },
-    },
-    {
-      id: "booking-title",
-      component: {
-        Text: {
-          text: { literalString: "Book a Table" },
-          usageHint: "h2",
-        },
-      },
-    },
-    {
-      id: "restaurant-image",
-      component: {
-        Image: {
-          url: { path: "imageUrl" },
-        },
-      },
-    },
-    {
-      id: "restaurant-address",
-      component: {
-        Text: {
-          text: { path: "address" },
-          styles: {
-            root: "a2ui-card-address",
-          },
-        },
-      },
-    },
-    {
-      id: "party-size-field",
-      component: {
-        TextField: {
-          label: { literalString: "Party Size" },
-          text: { path: "partySize" },
-          styles: {
-            root: "a2ui-form-field",
-          },
-        },
-      },
-    },
-    {
-      id: "datetime-field",
-      component: {
-        DateTimeInput: {
-          label: { literalString: "Date & Time" },
-          value: { path: "reservationTime" },
-          enableDate: true,
-          enableTime: true,
-          styles: {
-            root: "a2ui-form-field",
-          },
-        },
-      },
-    },
-    {
-      id: "dietary-field",
-      component: {
-        TextField: {
-          label: { literalString: "Dietary Requirements" },
-          text: { path: "dietary" },
-          styles: {
-            root: "a2ui-form-field",
-          },
-        },
-      },
-    },
-    {
-      id: "submit-button",
-      component: {
-        Button: {
-          child: "submit-reservation-text",
-          primary: true,
-          action: {
-            name: "submit_booking",
-            context: [
-              { key: "restaurantName", value: { path: "restaurantName" } },
-              { key: "partySize", value: { path: "partySize" } },
-              { key: "reservationTime", value: { path: "reservationTime" } },
-              { key: "dietary", value: { path: "dietary" } },
-              { key: "imageUrl", value: { path: "imageUrl" } },
-            ],
-          },
-        },
-      },
-    },
-    {
-      id: "submit-reservation-text",
-      component: {
-        Text: { text: { literalString: "Submit Reservation" } },
-      },
-    },
-  ];
-
-  const dataContents = [
-    { key: "title", valueString: "Book a Table" },
-    { key: "address", valueString: String(actionContext.address ?? "") },
-    {
-      key: "restaurantName",
-      valueString: String(actionContext.restaurantName ?? ""),
-    },
-    { key: "partySize", valueString: "2" },
-    { key: "reservationTime", valueString: "" },
-    { key: "dietary", valueString: "" },
-    { key: "imageUrl", valueString: String(actionContext.imageUrl ?? "") },
-  ];
-
-  const a2uiMessages = [
-    {
-      beginRendering: {
-        surfaceId,
-        root: "booking-form-row",
-        styles: {
-          bookingFormRow: "a2ui-booking-row",
-          bookingFormCard: "a2ui-card",
-          bookingFormColumn: "a2ui-booking-column",
-          formField: "a2ui-form-field",
-          inputField: "a2ui-input-field",
-          submitButton: "a2ui-submit-button",
-          bookingTitle: "a2ui-booking-title",
-          formLabel: "a2ui-form-label",
-        },
-      },
-    },
-    { surfaceUpdate: { surfaceId, components } },
-    { dataModelUpdate: { surfaceId, path: "/", contents: dataContents } },
-  ];
-
-  const parts: Array<
-    { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
-  > = [];
-  parts.push({
-    kind: "text",
-    text: `Please fill in the details to book at ${actionContext.restaurantName}.`,
-  });
-  for (const a2ui of a2uiMessages) {
-    parts.push(createA2UIPart(a2ui));
-  }
-
-  return {
-    kind: "status-update",
-    taskId,
-    contextId,
-    final: true,
-    status: {
-      state: "input-required",
-      timestamp: new Date().toISOString(),
-      message: {
-        kind: "message",
-        messageId: uuidv4(),
-        role: "agent",
-        taskId,
-        contextId,
-        parts,
-      },
-    },
-  };
-}
-
-function createBookingConfirmation(
-  actionContext: Record<string, unknown>,
-  taskId: string,
-  contextId: string,
-): TaskStatusUpdateEvent {
-  const surfaceId = "confirmation";
-
-  const components = [
-    {
-      id: "confirmation-row",
-      component: {
-        Row: {
-          children: { explicitList: ["confirmation-card"] },
-          justifyContent: "center",
-        },
-      },
-    },
-    {
-      id: "confirmation-card",
-      component: { 
-        Card: { 
-          child: "confirmation-column",
-          width: 400,
-          flex: "0 0 auto",
-        } 
-      },
-    },
-    {
-      id: "confirmation-column",
-      component: {
-        Column: {
-          children: {
-            explicitList: [
-              "confirm-title",
-              "confirm-image",
-              "divider1",
-              "confirm-details",
-              "divider2",
-              "confirm-dietary",
-              "confirm-text",
-            ],
-          },
-        },
-      },
-    },
-    {
-      id: "confirm-title",
-      component: { Text: { text: { path: "title" }, usageHint: "h2" } },
-    },
-    {
-      id: "confirm-image",
-      component: { Image: { url: { path: "imageUrl" } } },
-    },
-    {
-      id: "confirm-details",
-      component: { Text: { text: { path: "bookingDetails" } } },
-    },
-    {
-      id: "confirm-dietary",
-      component: { Text: { text: { path: "dietaryRequirements" } } },
-    },
-    {
-      id: "confirm-text",
-      component: {
-        Text: {
-          text: { literalString: "We look forward to seeing you!" },
-          usageHint: "h5",
-        },
-      },
-    },
-    { id: "divider1", component: { Divider: {} } },
-    { id: "divider2", component: { Divider: {} } },
-  ];
-
-  const bookingDetails = `Table for ${actionContext.partySize ?? "2"} at ${actionContext.restaurantName ?? ""} on ${actionContext.reservationTime ?? "TBD"}`;
-  const dietaryRequirements = actionContext.dietary
-    ? `Dietary requirements: ${actionContext.dietary}`
-    : "";
-
-  const dataContents = [
-    { key: "title", valueString: "Booking Confirmed!" },
-    { key: "bookingDetails", valueString: bookingDetails },
-    { key: "dietaryRequirements", valueString: dietaryRequirements },
-    { key: "imageUrl", valueString: String(actionContext.imageUrl ?? "") },
-  ];
-
-  const a2uiMessages = [
-    {
-      beginRendering: {
-        surfaceId,
-        root: "confirmation-row",
-        styles: {
-          confirmationRow: "a2ui-confirmation-row",
-          confirmationCard: "a2ui-card",
-          confirmationColumn: "a2ui-booking-column",
-          confirmTitle: "a2ui-booking-title",
-        },
-      },
-    },
-    { surfaceUpdate: { surfaceId, components } },
-    { dataModelUpdate: { surfaceId, path: "/", contents: dataContents } },
-  ];
-
-  const parts: Array<
-    { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
-  > = [];
-  parts.push({
-    kind: "text",
-    text: `Your reservation at ${actionContext.restaurantName} is confirmed!`,
-  });
-  for (const a2ui of a2uiMessages) {
-    parts.push(createA2UIPart(a2ui));
-  }
-
-  return {
-    kind: "status-update",
-    taskId,
-    contextId,
-    final: true,
-    status: {
-      state: "input-required",
-      timestamp: new Date().toISOString(),
-      message: {
-        kind: "message",
-        messageId: uuidv4(),
-        role: "agent",
-        taskId,
-        contextId,
-        parts,
-      },
-    },
-  };
-}
 
 export class RestaurantAgentExecutor implements AgentExecutor {
   async execute(
@@ -441,7 +98,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
           "[DEBUG] a2uiAction keys:",
           Object.keys(a2uiAction).join(", "),
         );
-        // Extract action from forwardedProps
         const actionName = a2uiAction?.actionName || a2uiAction?.name;
         const actionCtx = a2uiAction?.context || {};
         if (actionName) {
@@ -463,7 +119,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       }
     }
 
-    // Try to extract action from message parts first (actions take priority over text)
     for (const part of userMessage.parts) {
       if (part?.kind === "data") {
         const dataPart = part as {
@@ -474,14 +129,12 @@ export class RestaurantAgentExecutor implements AgentExecutor {
           "[DEBUG] Processing data part, keys:",
           Object.keys(dataPart.data).join(", "),
         );
-        // Check for various action keys
         if ("userAction" in dataPart.data) {
           console.log(
             "[DEBUG] Found userAction in data part, value:",
             JSON.stringify(dataPart.data.userAction),
           );
           const ua = dataPart.data.userAction;
-          // Handle both string and object formats
           if (typeof ua === "string") {
             userAction = ua;
             console.log("[DEBUG] userAction is string:", userAction);
@@ -529,7 +182,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       }
     }
 
-    // Only use text if no action was found
     if (!userAction) {
       for (const part of userMessage.parts) {
         if (part?.kind === "text") {
@@ -539,7 +191,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       }
     }
 
-    // If we got action from forwardedProps, generate query from it
     if (userAction && !query) {
       query = getQueryFromAction(userAction, actionContext);
     }
@@ -555,7 +206,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       query.substring(0, 50),
     );
 
-    // Check if this is a user action from A2UI button click
     if (userAction === "book_restaurant" && actionContext.restaurantName) {
       const finalUpdate = createBookingForm(actionContext, taskId, contextId);
       eventBus.publish(finalUpdate);
@@ -563,7 +213,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       return;
     }
 
-    // Handle booking submission - generate directly without LLM
     if (userAction === "submit_booking") {
       const finalUpdate = createBookingConfirmation(
         actionContext,
@@ -575,345 +224,23 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       return;
     }
 
-    // Normal flow - call LLM to get restaurants
     const systemPrompt = getSystemPrompt();
     const messages = [
       { role: "system" as const, content: systemPrompt },
       { role: "user" as const, content: query },
     ];
 
-    const sendRestaurantListUpdate = (
-      restaurants: Array<{
-        name: string;
-        cuisine: string;
-        location: string;
-        address?: string;
-        imageUrl?: string;
-        rating?: number;
-      }>,
-    ) => {
+    const sendRestaurantListUpdate = (restaurants: Restaurant[]) => {
       if (restaurants.length === 0) return;
-
-      const surfaceId = "restaurant-list";
-
-      // Use List component with template (matching official A2UI format)
-      const components: Array<{
-        id: string;
-        component: Record<string, unknown>;
-      }> = [];
-
-      // Root wrapper - Row for centering
-      components.push({
-        id: "root-wrapper",
-        component: {
-          Row: {
-            children: { explicitList: ["root-column"] },
-            justifyContent: "center",
-          },
-        },
-      });
-
-      // Inner column with title and list (title above cards, cards in row)
-      components.push({
-        id: "root-column",
-        component: {
-          Column: {
-            children: { explicitList: ["title-heading", "restaurant-list"] },
-          },
-        },
-      });
-
-      // Title
-      components.push({
-        id: "title-heading",
-        component: {
-          Text: {
-            text: { literalString: "Recommended Restaurants" },
-            usageHint: "h1",
-          },
-        },
-      });
-
-      // List with template - this is the proper way to render dynamic lists
-      components.push({
-        id: "restaurant-list",
-        component: {
-          List: {
-            direction: "horizontal",
-            flexWrap: true,
-            justifyContent: "center",
-            children: {
-              template: {
-                componentId: "restaurant-card",
-                dataBinding: "/restaurants",
-              },
-            },
-          },
-        },
-      });
-
-      // Card template component
-      components.push({
-        id: "restaurant-card",
-        component: {
-          Card: {
-            child: "card-content",
-            width: 400,
-            flex: "0 0 auto",
-            styles: {
-              root: "a2ui-card",
-            },
-          },
-        },
-      });
-
-      // Card content - Row with image and details
-      components.push({
-        id: "card-content",
-        component: {
-          Row: {
-            children: { explicitList: ["card-image", "card-details"] },
-            gap: 16,
-          },
-        },
-      });
-
-      // Image
-      components.push({
-        id: "card-image",
-        component: {
-          Image: {
-            url: { path: "imageUrl" },
-            styles: {
-              root: "a2ui-card-image",
-            },
-          },
-        },
-      });
-
-      // Details column
-      components.push({
-        id: "card-details",
-        component: {
-          Column: {
-            children: {
-              explicitList: [
-                "card-name",
-                "card-cuisine-row",
-                "card-address-row",
-                "card-rating-row",
-                "book-btn",
-              ],
-            },
-          },
-        },
-      });
-
-      // Name
-      components.push({
-        id: "card-name",
-        component: {
-          Text: {
-            text: { path: "name" },
-            usageHint: "h3",
-          },
-        },
-      });
-
-      // Cuisine with label
-      components.push({
-        id: "card-cuisine-row",
-        component: {
-          Row: {
-            children: { explicitList: ["cuisine-label", "cuisine-value"] },
-          },
-        },
-      });
-      components.push({
-        id: "cuisine-label",
-        component: {
-          Text: {
-            text: { literalString: "Cuisine: " },
-            styles: {
-              root: "a2ui-card-label",
-            },
-          },
-        },
-      });
-      components.push({
-        id: "cuisine-value",
-        component: {
-          Text: {
-            text: { path: "cuisine" },
-          },
-        },
-      });
-
-      // Address with label
-      components.push({
-        id: "card-address-row",
-        component: {
-          Row: {
-            children: { explicitList: ["address-label", "address-value"] },
-          },
-        },
-      });
-      components.push({
-        id: "address-label",
-        component: {
-          Text: {
-            text: { literalString: "Address: " },
-            styles: {
-              root: "a2ui-card-label",
-            },
-          },
-        },
-      });
-      components.push({
-        id: "address-value",
-        component: {
-          Text: {
-            text: { path: "address" },
-          },
-        },
-      });
-
-      // Rating with label
-      components.push({
-        id: "card-rating-row",
-        component: {
-          Row: {
-            children: { explicitList: ["rating-label", "rating-value"] },
-          },
-        },
-      });
-      components.push({
-        id: "rating-label",
-        component: {
-          Text: {
-            text: { literalString: "Rating: " },
-            styles: {
-              root: "a2ui-card-label",
-            },
-          },
-        },
-      });
-      components.push({
-        id: "rating-value",
-        component: {
-          Text: {
-            text: { path: "rating" },
-          },
-        },
-      });
-
-      // Book button with action
-      components.push({
-        id: "book-btn-text",
-        component: {
-          Text: {
-            text: { literalString: "Book" },
-          },
-        },
-      });
-
-      components.push({
-        id: "book-btn",
-        component: {
-          Button: {
-            child: "book-btn-text",
-            primary: true,
-            action: {
-              name: "book_restaurant",
-              context: [
-                { key: "restaurantName", value: { path: "name" } },
-                { key: "imageUrl", value: { path: "imageUrl" } },
-                { key: "address", value: { path: "address" } },
-              ],
-            },
-            styles: {
-              root: "a2ui-card-book-button",
-            },
-          },
-        },
-      });
-
-      // Data model - restaurants array with nested valueMap
-      const restaurantItems: Array<{
-        key: string;
-        valueMap: Array<{
-          key: string;
-          valueString?: string;
-          valueNumber?: number;
-        }>;
-      }> = [];
-      restaurants.forEach((r, i) => {
-        restaurantItems.push({
-          key: `restaurant-${i}`,
-          valueMap: [
-            { key: "name", valueString: r.name },
-            { key: "cuisine", valueString: r.cuisine },
-            { key: "location", valueString: r.location },
-            { key: "address", valueString: r.address || "" },
-            {
-              key: "rating",
-              valueNumber: r.rating || 0,
-            },
-            { key: "imageUrl", valueString: r.imageUrl || "" },
-          ],
-        });
-      });
-
-      const dataContents = [
-        {
-          key: "restaurants",
-          valueMap: restaurantItems,
-        },
-      ];
-
-      // Combine all A2UI messages
-      const a2uiMessages = [
-        {
-          beginRendering: {
-            surfaceId,
-            root: "root-wrapper",
-            styles: {
-              rootWrapper: "a2ui-root-wrapper",
-            },
-          },
-        },
-        { surfaceUpdate: { surfaceId, components } },
-        { dataModelUpdate: { surfaceId, path: "/", contents: dataContents } },
-      ];
-
-      const parts: Array<
-        { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
-      > = [];
-
-      for (const a2ui of a2uiMessages) {
-        parts.push(createA2UIPart(a2ui));
-      }
-
-      // Publish UI update (not final, we will send text after)
-      const uiUpdate: TaskStatusUpdateEvent = {
-        kind: "status-update",
+      const surfaceId = `restaurant-list-${uuidv4()}`;
+      const update = createRestaurantListUI(
+        surfaceId,
+        restaurants,
         taskId,
         contextId,
-        final: false,
-        status: {
-          state: "input-required", // Still processing text
-          timestamp: new Date().toISOString(),
-          message: {
-            kind: "message",
-            messageId: uuidv4(),
-            role: "agent",
-            taskId,
-            contextId,
-            parts,
-          },
-        },
-      };
-      eventBus.publish(uiUpdate);
+        false,
+      );
+      eventBus.publish(update);
     };
 
     const runTool = async (
@@ -927,7 +254,6 @@ export class RestaurantAgentExecutor implements AgentExecutor {
           count: args.count as number | undefined,
         });
 
-        // Publish results immediately!
         sendRestaurantListUpdate(list);
 
         return JSON.stringify(list);
@@ -969,9 +295,9 @@ export class RestaurantAgentExecutor implements AgentExecutor {
       return;
     }
 
-    const parts: Array<
-      { kind: "text"; text: string } | ReturnType<typeof createA2UIPart>
-    > = [{ kind: "text", text: content.trim() || "Done." }];
+    const parts: Array<{ kind: "text"; text: string }> = [
+      { kind: "text", text: content.trim() || "Done." },
+    ];
 
     const finalUpdate: TaskStatusUpdateEvent = {
       kind: "status-update",
