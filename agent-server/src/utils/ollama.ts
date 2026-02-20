@@ -3,12 +3,12 @@
  */
 const OLLAMA_BASE = "http://localhost:11434";
 
-export interface OllamaMessage {
+interface OllamaMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-export interface OllamaTool {
+interface OllamaTool {
   type: "function";
   function: {
     name: string;
@@ -21,7 +21,7 @@ export interface OllamaTool {
   };
 }
 
-export type OllamaToolRunner = (
+type OllamaToolRunner = (
   name: string,
   args: Record<string, unknown>,
 ) => Promise<string>;

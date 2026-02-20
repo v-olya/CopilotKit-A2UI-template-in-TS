@@ -1,6 +1,6 @@
 import type { Restaurant } from "./utils/ui-helpers.js";
 
-export const restaurants: Restaurant[] = [
+const restaurants: Restaurant[] = [
   {
     name: "Golden Dragon",
     cuisine: "Chinese",
