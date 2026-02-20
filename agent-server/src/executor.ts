@@ -156,7 +156,7 @@ function createBookingForm(
       beginRendering: {
         surfaceId,
         root: "booking-form-column",
-        styles: { primaryColor: "#FF0000", font: "Roboto" },
+        styles: {},
       },
     },
     { surfaceUpdate: { surfaceId, components } },
@@ -270,7 +270,7 @@ function createBookingConfirmation(
       beginRendering: {
         surfaceId,
         root: "confirmation-card",
-        styles: { primaryColor: "#FF0000", font: "Roboto" },
+        styles: {},
       },
     },
     { surfaceUpdate: { surfaceId, components } },
@@ -727,7 +727,7 @@ export class RestaurantAgentExecutor implements AgentExecutor {
           beginRendering: {
             surfaceId,
             root: "root-column",
-            styles: { primaryColor: "#FF0000", font: "Roboto" },
+            styles: {},
           },
         },
         { surfaceUpdate: { surfaceId, components } },

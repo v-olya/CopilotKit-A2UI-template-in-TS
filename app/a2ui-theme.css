@@ -1,4 +1,22 @@
-:root {
+:root,
+.a2ui-surface {
+  --color-scheme: light;
+  --g-1: 4px;
+  --g-2: 8px;
+  --g-3: 12px;
+  --g-4: 16px;
+  --g-5: 20px;
+  --g-6: 24px;
+  --g-7: 28px;
+  --g-8: 32px;
+  --g-9: 36px;
+  --g-10: 40px;
+  --g-11: 44px;
+  --g-12: 48px;
+  --g-13: 52px;
+  --g-14: 56px;
+  --g-15: 60px;
+  --g-16: 64px;
   --n-100: #ffffff;
   --n-99: #fcfcfc;
   --n-98: #f9f9f9;
@@ -150,6 +168,7 @@ body {
     sans-serif;
   --font-family-mono: "Google Sans Code", "Helvetica Neue", Helvetica, Arial,
     sans-serif;
+  --default-font-family: "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   background: var(--background-light);
   font-family: var(--font-family);
@@ -157,4 +176,15 @@ body {
   padding: 0;
   width: 100svw;
   height: 100svh;
+}
+
+.a2ui-surface {
+  color-scheme: light;
+  --font-family: "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-flex: "Google Sans Flex", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --font-family-mono: "Google Sans Code", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  --default-font-family: "Google Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font-family);
 }
