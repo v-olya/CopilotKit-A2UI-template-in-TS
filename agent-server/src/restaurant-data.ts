@@ -1,14 +1,4 @@
-/**
- * In-memory restaurant data for the get_restaurants tool.
- */
-export interface Restaurant {
-  name: string;
-  cuisine: string;
-  location: string;
-  address?: string;
-  imageUrl?: string;
-  rating?: number;
-}
+import type { Restaurant } from "./utils/ui-helpers.js";
 
 export const restaurants: Restaurant[] = [
   {
